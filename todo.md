@@ -1,5 +1,5 @@
 # Refinement tasks
 
-- [x] Make suggested meal cards more compact so more options fit.
-- [x] Place the logging dial and meal tracker on the same line.
-- [x] Verify the revised dashboard and save a new checkpoint.
+- [x] Add additional suggested meal cards to the compact Next Meal list.
+- [x] Keep each added card tappable and consistent with the existing interaction.
+- [x] Verify the denser dashboard and save a new checkpoint.
