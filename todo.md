@@ -1,6 +1,5 @@
 # Refinement tasks
 
-- [x] Reduce the size of the daily logging dial.
-- [x] Remove the “No pressure — just keep the thread.” supporting sentence.
-- [x] Rename “You usually eat around now” to “Next Meal.”
+- [x] Make suggested meal cards more compact so more options fit.
+- [x] Place the logging dial and meal tracker on the same line.
 - [x] Verify the revised dashboard and save a new checkpoint.
