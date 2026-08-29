@@ -16,6 +16,7 @@ import {
   Mic,
   Plus,
   RotateCcw,
+  Send,
   Sparkles,
   Utensils,
   X,
@@ -55,9 +56,22 @@ export default function Home() {
   const [logged, setLogged] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatStep, setChatStep] = useState(0);
+  const [chatMessages, setChatMessages] = useState([
+    { role: "agent", text: "What did you eat? You can be approximate — I’ll fill in the details." },
+  ]);
 
   const logMeal = () => { setLogged(true); setSheet(null); toast.success("Logged — +1 consistency resource banked", { description: "You can edit this meal anytime." }); };
   const toggleIngredient = (name: string) => setIngredients((items) => items.includes(name) ? items.filter((i) => i !== name) : [...items, name]);
+  const sendChat = () => {
+    const value = chatInput.trim();
+    if (!value) return;
+    const followUp = chatStep === 0 ? "Got it. How much did you have — a full serving, half, or something else?" : "Thanks. I can estimate this now, and you can edit the meal after it’s logged.";
+    setChatMessages((messages) => [...messages, { role: "user", text: value }, { role: "agent", text: followUp }]);
+    setChatInput("");
+    setChatStep((step) => step + 1);
+  };
 
   return <div className="review-shell">
     <aside className="review-notes">
@@ -95,7 +109,7 @@ export default function Home() {
     </main>
 
     {sheet === "meal" && <Sheet eyebrow="Predicted meal" onClose={() => setSheet(null)}><h3 className="sheet-title">Salmon grain bowl</h3><p className="sheet-subtitle">Preselected from your usual order.</p><div className="portion-row"><div><span className="eyebrow">Portion</span><strong>Full bowl</strong></div><span className="exact">2 cups</span><button className="mini-button">Change</button></div><div className="ingredient-list"><div className="section-label"><span>Likely ingredients</span><span className="muted">Tap to swap</span></div>{["salmon", "rice", "greens", "berries"].map((item) => <button key={item} className={ingredients.includes(item) ? "ingredient selected" : "ingredient"} onClick={() => toggleIngredient(item)}><span>{ingredients.includes(item) ? <Check size={14} /> : <Plus size={14} />}</span>{item}</button>)}<button className="swap-link" onClick={() => toggleIngredient("banana")}>+ swap berries for banana</button></div><div className="estimate"><span>Estimated nutrition</span><strong>620 kcal</strong><small>34g protein · 22g fat · 68g carbs</small></div><button className="primary-button" onClick={logMeal}>Log this meal <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
-    {sheet === "text" && <Sheet eyebrow="Text entry" onClose={() => setSheet(null)}><h3 className="sheet-title">Tell us what you ate.</h3><p className="sheet-subtitle">Start with the simplest version. You can edit the estimate after logging.</p><textarea className="text-entry" autoFocus placeholder="e.g. turkey sandwich and an apple" /><button className="primary-button" onClick={() => { setSheet(null); toast.success("Text estimate logged — Edit or Undo from the confirmation."); }}>Log this meal <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
+    {sheet === "text" && <Sheet eyebrow="AI meal log" onClose={() => setSheet(null)}><div className="chat-intro"><div className="chat-avatar"><Sparkles size={17} /></div><div><strong>MealTrack AI</strong><small>Only asks what it needs</small></div></div><div className="chat-thread" aria-live="polite">{chatMessages.map((message, index) => <div key={`${message.role}-${index}`} className={`chat-message ${message.role}`}><span>{message.text}</span></div>)}</div><div className="chat-composer"><input autoFocus value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") sendChat(); }} placeholder={chatStep === 0 ? "e.g. turkey sandwich and an apple" : "e.g. about half a sandwich"} aria-label="Reply to MealTrack AI" /><button onClick={sendChat} aria-label="Send reply"><Send size={16} /></button></div>{chatStep > 0 && <button className="primary-button" onClick={() => { setSheet(null); toast.success("AI estimate logged — Edit or Undo from the confirmation."); }}>Log with this estimate <Check size={16} /></button>}<button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
     {sheet === "voice" && <Sheet eyebrow="Voice entry" onClose={() => setSheet(null)}><div className="voice-mark"><Mic size={22} /></div><h3 className="sheet-title">Say what you ate.</h3><p className="sheet-subtitle">We’ll turn your words into a meal estimate you can edit.</p><button className="voice-listen" onClick={() => toast("Listening… say what you ate") }><Mic size={20} /><span>Tap to speak</span></button><button className="primary-button" onClick={() => { setSheet(null); toast.success("Voice estimate logged — Edit or Undo from the confirmation."); }}>Log estimate <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
     {sheet === "restaurant" && <Sheet eyebrow="Restaurant context" onClose={() => setSheet(null)}><div className="location-heading"><MapPin size={20} /><div><h3>Juniper Kitchen</h3><p>Recognized nearby · 6 previous visits</p></div></div><div className="menu-note"><Sparkles size={15} /><span>Reliable menu data found</span></div><button className="meal-card compact" onClick={() => { setSheet("meal"); setRestaurant(true); }}><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>Harvest bowl</strong><small>Previously ordered · 540 kcal</small></span><ChevronRight size={18} /></button><button className="meal-card compact"><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>View full menu</strong><small>Browse reliable menu items</small></span><ChevronRight size={18} /></button><div className="fallback"><span>No reliable data?</span><div className="fallback-actions"><button onClick={() => imageInputRef.current?.click()}>Photo</button><button onClick={() => setSheet("voice")}>Voice</button><button onClick={() => setSheet("text")}>Text</button></div></div></Sheet>}
     {recovery && <Sheet eyebrow="Streak recovery" onClose={() => setRecovery(false)}><div className="recovery-icon"><RotateCcw size={22} /></div><h3 className="sheet-title">Want to complete Monday?</h3><p className="sheet-subtitle">Your streak paused because the day was incomplete. Editing the prior day can restore it. Your 120 adventure energy is safe either way.</p><button className="primary-button" onClick={() => { setRecovery(false); toast.success("Monday completed — 7 day streak restored"); }}>Review Monday <ChevronRight size={16} /></button><button className="text-button" onClick={() => setRecovery(false)}>Not now</button></Sheet>}

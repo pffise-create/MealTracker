@@ -1,7 +1,7 @@
 # Refinement tasks
 
-- [x] Make the capture text area open text entry directly.
-- [x] Make the microphone icon open voice capture directly.
-- [x] Make the camera icon open image selection directly.
-- [x] Remove the intermediate capture-choice screen from these entry points.
-- [x] Verify the direct capture interactions and save a new checkpoint.
+- [x] Replace the text-entry sheet with a bottom-sheet AI chat.
+- [x] Show an agent clarifying question within the chat.
+- [x] Add a reply field and send action for the user.
+- [x] Keep the chat flow connected to meal logging feedback.
+- [x] Verify the conversational logging flow and save a new checkpoint.
