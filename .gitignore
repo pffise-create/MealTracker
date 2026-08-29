@@ -6,6 +6,10 @@
 dist/
 build/
 *.dist
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcresult
 
 # Environment variables
 .env
