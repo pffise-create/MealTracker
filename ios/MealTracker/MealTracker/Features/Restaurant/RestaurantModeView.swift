@@ -202,10 +202,10 @@ struct RestaurantModeView: View {
     private var inferredCategory: MealCategory {
         let hour = Calendar.autoupdatingCurrent.component(.hour, from: Date())
         switch hour {
-        case 4..<11: .breakfast
-        case 11..<15: .lunch
-        case 17..<22: .dinner
-        default: .snacks
+        case 4..<11: return .breakfast
+        case 11..<15: return .lunch
+        case 17..<22: return .dinner
+        default: return .snacks
         }
     }
 

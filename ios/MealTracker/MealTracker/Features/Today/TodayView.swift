@@ -120,9 +120,9 @@ struct TodayView: View {
     private var greeting: String {
         let hour = Calendar.autoupdatingCurrent.component(.hour, from: Date())
         switch hour {
-        case 4..<12: "Good morning"
-        case 12..<17: "Good afternoon"
-        default: "Good evening"
+        case 4..<12: return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default: return "Good evening"
         }
     }
 }
@@ -410,6 +410,7 @@ private struct RecentConfirmationCard: View {
                 }
                 Spacer()
             }
+            .accessibilityIdentifier("recent.confirmation")
             if let disclosure = confirmation.disclosure {
                 Text(disclosure)
                     .font(.appBody(.caption2))
@@ -427,7 +428,6 @@ private struct RecentConfirmationCard: View {
         }
         .padding(AppSpacing.md)
         .appSurface(prominent: true)
-        .accessibilityIdentifier("recent.confirmation")
     }
 }
 

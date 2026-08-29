@@ -1,4 +1,4 @@
-import CoreLocation
+@preconcurrency import CoreLocation
 import Foundation
 import MapKit
 
@@ -15,7 +15,7 @@ enum VenueResolutionError: LocalizedError {
 }
 
 @MainActor
-final class LiveVenueResolver: NSObject, VenueResolving, CLLocationManagerDelegate {
+final class LiveVenueResolver: NSObject, VenueResolving, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation, Error>?
 

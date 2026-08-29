@@ -62,11 +62,11 @@ extension Font {
     static func appDisplay(_ style: TextStyle = .title, weight: Font.Weight = .bold) -> Font {
         let size: CGFloat
         switch style {
-        case .largeTitle: 34
-        case .title: 28
-        case .title2: 22
-        case .title3: 20
-        default: 18
+        case .largeTitle: size = 34
+        case .title: size = 28
+        case .title2: size = 22
+        case .title3: size = 20
+        default: size = 18
         }
         return .custom("Plus Jakarta Sans", size: size, relativeTo: style).weight(weight)
     }
@@ -74,12 +74,12 @@ extension Font {
     static func appBody(_ style: TextStyle = .body, weight: Font.Weight = .regular) -> Font {
         let size: CGFloat
         switch style {
-        case .headline: 17
-        case .subheadline: 15
-        case .callout: 16
-        case .caption: 12
-        case .caption2: 11
-        default: 17
+        case .headline: size = 17
+        case .subheadline: size = 15
+        case .callout: size = 16
+        case .caption: size = 12
+        case .caption2: size = 11
+        default: size = 17
         }
         return .custom("DM Sans", size: size, relativeTo: style).weight(weight)
     }

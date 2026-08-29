@@ -28,12 +28,12 @@ final class MealTrackerUITests: XCTestCase {
         ingredient.tap()
         app.buttons["meal.log"].tap()
 
-        XCTAssertTrue(app.otherElements["recent.confirmation"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["recent.confirmation"].waitForExistence(timeout: 3))
         app.buttons["recent.edit"].tap()
         XCTAssertTrue(app.buttons["entry.save"].waitForExistence(timeout: 2))
         app.buttons["Cancel"].tap()
         app.buttons["recent.undo"].tap()
-        XCTAssertFalse(app.otherElements["recent.confirmation"].waitForExistence(timeout: 1))
+        XCTAssertFalse(app.descendants(matching: .any)["recent.confirmation"].waitForExistence(timeout: 1))
     }
 
     func testMarkCategorySkippedAndCompleteDay() {
@@ -70,10 +70,10 @@ final class MealTrackerUITests: XCTestCase {
     }
 
     func testNavigatePrimaryDestinations() {
-        XCTAssertTrue(app.otherElements["today.completeness"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["today.completeness"].exists)
         app.tabBars.buttons["History"].tap()
-        XCTAssertTrue(app.otherElements["history.calendar"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["history.calendar"].waitForExistence(timeout: 2))
         app.tabBars.buttons["Adventure"].tap()
-        XCTAssertTrue(app.otherElements["adventure.balance"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["adventure.balance"].waitForExistence(timeout: 2))
     }
 }

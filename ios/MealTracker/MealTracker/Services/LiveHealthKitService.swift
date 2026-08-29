@@ -17,12 +17,12 @@ final class LiveHealthKitService: HealthKitReading {
 
     func requestReadAccess() async throws -> Bool {
         guard isAvailable else { throw HealthKitServiceError.unavailable }
-        let types: Set<HKObjectType> = [
+        let types = Set([
             HKObjectType.quantityType(forIdentifier: .bodyMass),
             HKObjectType.quantityType(forIdentifier: .stepCount),
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned),
             HKObjectType.workoutType()
-        ].compactMap { $0 }
+        ].compactMap { $0 })
 
         return try await withCheckedThrowingContinuation { continuation in
             store.requestAuthorization(toShare: [], read: types) { success, error in
@@ -84,7 +84,12 @@ final class LiveHealthKitService: HealthKitReading {
         guard let start = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -days, to: Date()) else { return nil }
         let predicate = HKQuery.predicateForSamples(withStart: start, end: Date())
         return try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: HKObjectQueryNoLimit) {
+            let query = HKSampleQuery(
+                sampleType: .workoutType(),
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) {
                 _, samples, error in
                 if let error { continuation.resume(throwing: error); return }
                 continuation.resume(returning: samples?.count)
