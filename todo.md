@@ -1,7 +1,6 @@
-# Phase 2 refinement
+# Phase 2 color refinement
 
-- [x] Keep Mineral Calm as the retained direction.
-- [x] Remove Warm Editorial, Citrus Ledger, Night Kitchen, and Coastal Utility.
-- [x] Add one bright-color visual direction beside Mineral Calm.
-- [x] Preserve the shared dashboard and meal-detail UX.
-- [x] Verify the two-option comparison and save a new checkpoint.
+- [x] Replace Bright Signal with an electric-blue-on-white direction.
+- [x] Add a lime-green/yellow direction using the same approved UX.
+- [x] Keep Mineral Calm unchanged.
+- [x] Verify the three-option comparison and save a new checkpoint.

@@ -1,5 +1,5 @@
-# Phase 2 verification findings
+# Phase 2 color refinement verification
 
-The desktop comparison canvas presents five distinct visual directions side by side: Warm Editorial, Mineral Calm, Citrus Ledger, Night Kitchen, and Coastal Utility. Each option preserves the same dashboard hierarchy, three suggested meals, capture bar, bottom navigation, and meal-detail sheet structure. The desktop canvas is readable as a horizontal comparison, with each direction carrying its own palette, type pairing, icon label, imagery approach, character, and tradeoff.
+Mineral Calm remains unchanged as the neutral baseline. Electric Blue now uses a white background with saturated blue action states, blue ring segments, blue suggestion borders, and a blue Log button. Lime & Sun uses a pale lime-tinted ground with lime-green action states and a warm yellow estimate surface, while retaining dark text for contrast.
 
-At the iPhone viewport, the five options become a horizontally scrollable rail. The first direction is fully visible and the second direction is visibly available at the right edge, making the comparison pattern discoverable without changing the shared UX. The build and TypeScript checks pass. The remaining limitation is that direct interaction equivalence is represented by compact mockup controls and toast feedback rather than the full Phase 1 sheets inside every visual option; this keeps the comparison canvas focused on visual direction selection.
+The desktop canvas shows all three directions side by side with the same dashboard and meal-detail structures. At the iPhone viewport, the first direction is fully visible and the next direction is discoverable in the horizontal rail. Type-check and production build pass.
