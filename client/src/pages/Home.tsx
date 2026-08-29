@@ -1,117 +1,73 @@
 /*
- * Phase 1 design reminder — Monochrome Editorial Instrument.
- * Keep hierarchy, predicted actions, neutral progress, and low-friction capture visible.
- * This page is intentionally grayscale and low fidelity until the wireframe is approved.
+ * Phase 2 design reminder — five visual directions, one unchanged MealTrack UX.
+ * Compare hierarchy, predicted action clarity, nutrition neutrality, and native iPhone character.
  */
-import { useRef, useState } from "react";
-import {
-  ArrowLeft,
-  Camera,
-  Check,
-  ChevronRight,
-  CircleHelp,
-  Clock3,
-  Compass,
-  MapPin,
-  Mic,
-  Plus,
-  RotateCcw,
-  Send,
-  Sparkles,
-  Utensils,
-  X,
-} from "lucide-react";
+import { CSSProperties } from "react";
+import { ArrowUpRight, Camera, Check, ChevronRight, CircleHelp, Image as ImageIcon, Mic, Moon, Plus, Send, Sparkles, Sun, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
 const meals = [
   { name: "Salmon grain bowl", meta: "Your usual • 12:30 PM", kcal: "620 kcal", image: "/manus-storage/mealtrack-food-bowl_ab7a0551.png" },
   { name: "Avocado toast", meta: "Logged 4 times this month", kcal: "410 kcal", image: "/manus-storage/mealtrack-food-toast_871d3672.png" },
   { name: "Overnight oats", meta: "Often on busy mornings", kcal: "360 kcal" },
-  { name: "Chicken wrap", meta: "Your usual takeout", kcal: "510 kcal" },
 ];
 
-function Ring() {
-  return (
-    <div className="ring" aria-label="Two of four meal categories logged">
-      <div className="ring-center"><strong>2 / 4</strong><span>logged</span></div>
-    </div>
-  );
+const directions = [
+  { id: "01", name: "Warm Editorial", short: "Premium print utility", className: "warm-editorial", accent: "#B8664D", accentSoft: "#E9CFC3", bg: "#F4F0E8", ink: "#25231F", muted: "#766F66", line: "#D8D0C4", font: "Fraunces + DM Sans", icon: "Lucide", image: "User photos", character: "Tactile, composed, quietly encouraging.", tradeoff: "Warmth raises approachability, but the clay accent needs restraint to keep progress neutral." },
+  { id: "02", name: "Mineral Calm", short: "Precision without pressure", className: "mineral-calm", accent: "#547A82", accentSoft: "#C9DCDE", bg: "#F7F8F6", ink: "#202525", muted: "#6E7A78", line: "#DDE3DF", font: "Plus Jakarta Sans", icon: "Phosphor", image: "Open Food Facts", character: "Credible, clear, reassuring.", tradeoff: "Strongest scanability, but risks feeling like generic clinical wellness software." },
+  { id: "03", name: "Citrus Ledger", short: "A signal for the next action", className: "citrus-ledger", accent: "#E4A52D", accentSoft: "#F3E2AE", bg: "#FBFAF5", ink: "#20211E", muted: "#77736A", line: "#D9D6CB", font: "Space Grotesk + IBM Plex Sans", icon: "Tabler", image: "Generated overheads", character: "Focused, energetic, disciplined.", tradeoff: "The clearest action signal, but citrus must not become a reward-chasing color." },
+  { id: "04", name: "Night Kitchen", short: "A late-evening companion", className: "night-kitchen", accent: "#D6A35D", accentSoft: "#5D4A32", bg: "#171917", ink: "#F2EEE4", muted: "#A4ABA1", line: "#394039", font: "Manrope + Instrument Serif", icon: "Lucide", image: "User / licensed photos", character: "Intimate, cinematic, low-light calm.", tradeoff: "Most distinctive at night, but dense macro data needs careful contrast." },
+  { id: "05", name: "Coastal Utility", short: "A field guide for daily meals", className: "coastal-utility", accent: "#287A85", accentSoft: "#C5DEDA", bg: "#F1F5F2", ink: "#19323A", muted: "#718688", line: "#D2E0DE", font: "Public Sans + Newsreader", icon: "Radix", image: "Emoji / open illustrations", character: "Airy, optimistic, spacious.", tradeoff: "Most approachable, but softness can weaken the predicted action hierarchy." },
+];
+
+function MealThumb({ meal }: { meal: typeof meals[number] }) {
+  return meal.image ? <img src={meal.image} alt="" /> : <span className="mini-thumb-placeholder"><Utensils size={13} /></span>;
 }
 
-function Sheet({ children, onClose, eyebrow }: { children: React.ReactNode; onClose: () => void; eyebrow: string }) {
-  return <div className="sheet-backdrop" role="presentation" onClick={onClose}><section className="sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}><div className="sheet-handle" /><div className="sheet-head"><span className="eyebrow">{eyebrow}</span><button className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button></div>{children}</section></div>;
+function MiniRing() {
+  return <div className="mini-ring"><div><strong>2/4</strong><small>logged</small></div></div>;
 }
 
-function AppNav({ page, setPage }: { page: string; setPage: (p: string) => void }) {
-  return <nav className="bottom-nav" aria-label="Primary navigation">
-    {[{ id: "dashboard", icon: Utensils, label: "Today" }, { id: "history", icon: Clock3, label: "History" }, { id: "adventure", icon: Compass, label: "Adventure" }].map(({ id, icon: Icon, label }) => <button key={id} className={page === id ? "nav-item active" : "nav-item"} onClick={() => setPage(id)}><Icon size={18} /><span>{label}</span></button>)}
-  </nav>;
+function MiniPhone({ direction }: { direction: typeof directions[number] }) {
+  return <div className="mini-phone">
+    <div className="mini-status"><span>9:41</span><span>▰ ◌ ▰</span></div>
+    <div className="mini-header"><div><small>WEDNESDAY, OCTOBER 18</small><h3>Good morning, Alex</h3></div><span className="mini-avatar">AR</span></div>
+    <div className="mini-log"><MiniRing /><div className="mini-log-copy"><small>DAILY LOG</small><strong>2 of 4 moments</strong><div className="mini-segments"><i /><i /><i /><i /></div><div className="mini-segment-labels"><span>Breakfast</span><span>Lunch</span><span>Dinner</span><span>Snacks</span></div></div></div>
+    <div className="mini-metrics"><div className="mini-label">NEUTRAL SNAPSHOT <CircleHelp size={10} /></div><div className="mini-metric-row"><b>1,240<small>calories</small></b><b>72g<small>protein</small></b><b>48g<small>fat</small></b><b>116g<small>carbs</small></b></div></div>
+    <div className="mini-suggestions"><div className="mini-label"><span>NEXT MEAL</span><u>Try restaurant mode</u></div>{meals.map((meal) => <button key={meal.name} onClick={() => toast(`${direction.name}: predicted meal selected`)}><MealThumb meal={meal} /><span><strong>{meal.name}</strong><small>{meal.meta}</small><small>{meal.kcal}</small></span><ChevronRight size={13} /></button>)}</div>
+    <div className="mini-capture"><Sparkles size={13} /><span>What did you eat?</span><Mic size={12} /><Camera size={12} /></div>
+    <div className="mini-nav"><b><Utensils size={13} />Today</b><span><Sun size={13} />History</span><span><Moon size={13} />Adventure</span></div>
+  </div>;
+}
+
+function MiniDetailSheet({ direction }: { direction: typeof directions[number] }) {
+  return <div className="detail-swatch">
+    <div className="swatch-top"><span>MEAL DETAIL</span><button onClick={() => toast(`${direction.name}: detail sheet selected`)} aria-label="Open detail option"><ArrowUpRight size={14} /></button></div>
+    <h3>Salmon grain bowl</h3>
+    <p>Preselected from your usual order.</p>
+    <div className="swatch-portion"><span><small>PORTION</small><strong>Full bowl</strong></span><b>2 cups</b><button>Change</button></div>
+    <div className="swatch-ingredients"><small>LIKELY INGREDIENTS</small><div><button className="selected"><Check size={10} />salmon</button><button className="selected"><Check size={10} />rice</button><button className="selected"><Check size={10} />greens</button><button><Plus size={10} />berries</button></div></div>
+    <div className="swatch-estimate"><span>Estimated nutrition</span><strong>620 kcal</strong></div>
+    <button className="swatch-log" onClick={() => toast(`${direction.name}: Log action selected`)}>Log this meal <Check size={13} /></button>
+  </div>;
+}
+
+function DirectionCard({ direction }: { direction: typeof directions[number] }) {
+  const style = { "--accent": direction.accent, "--accent-soft": direction.accentSoft, "--direction-bg": direction.bg, "--direction-ink": direction.ink, "--direction-muted": direction.muted, "--direction-line": direction.line } as CSSProperties;
+  return <article className={`direction-card ${direction.className}`} style={style}>
+    <header className="direction-heading"><div><span className="direction-index">{direction.id}</span><h2>{direction.name}</h2><p>{direction.short}</p></div><button aria-label={`Select ${direction.name}`} onClick={() => toast(`${direction.name} selected for review`)}><ArrowUpRight size={17} /></button></header>
+    <MiniPhone direction={direction} />
+    <MiniDetailSheet direction={direction} />
+    <div className="direction-meta"><div><span>FONT SYSTEM</span><strong>{direction.font}</strong></div><div><span>ICON SYSTEM</span><strong>{direction.icon}</strong></div><div><span>FOOD IMAGERY</span><strong>{direction.image}</strong></div></div>
+    <p className="direction-character">{direction.character}</p>
+    <p className="direction-tradeoff"><b>Tradeoff</b> {direction.tradeoff}</p>
+  </article>;
 }
 
 export default function Home() {
-  const [page, setPage] = useState("dashboard");
-  const [sheet, setSheet] = useState<"meal" | "text" | "voice" | "end" | "restaurant" | null>(null);
-  const [restaurant, setRestaurant] = useState(false);
-  const [ingredients, setIngredients] = useState(["salmon", "rice", "greens", "berries"]);
-  const [logged, setLogged] = useState(false);
-  const [recovery, setRecovery] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const [chatInput, setChatInput] = useState("");
-  const [chatStep, setChatStep] = useState(0);
-  const [chatMessages, setChatMessages] = useState([
-    { role: "agent", text: "What did you eat? You can be approximate — I’ll fill in the details." },
-  ]);
-
-  const logMeal = () => { setLogged(true); setSheet(null); toast.success("Logged — +1 consistency resource banked", { description: "You can edit this meal anytime." }); };
-  const toggleIngredient = (name: string) => setIngredients((items) => items.includes(name) ? items.filter((i) => i !== name) : [...items, name]);
-  const sendChat = () => {
-    const value = chatInput.trim();
-    if (!value) return;
-    const followUp = chatStep === 0 ? "Got it. How much did you have — a full serving, half, or something else?" : "Thanks. I can estimate this now, and you can edit the meal after it’s logged.";
-    setChatMessages((messages) => [...messages, { role: "user", text: value }, { role: "agent", text: followUp }]);
-    setChatInput("");
-    setChatStep((step) => step + 1);
-  };
-
-  return <div className="review-shell">
-    <aside className="review-notes">
-      <div className="note-brand"><img src="/manus-storage/mealtrack-mark_41ae0274.png" alt="" /><span>MEALTRACK<br /><small>PHASE 01 / WIREFRAME</small></span></div>
-      <div className="note-rule" />
-      <p className="eyebrow">Review canvas</p>
-      <h1>Make the next log<br /><em>obvious.</em></h1>
-      <p className="note-copy">A grayscale interaction study for a predictive meal-tracking app. The product rewards consistency, never dietary perfection.</p>
-      <div className="annotation"><span>01</span><p>Primary action is predicted, prefilled, and one tap away.</p></div>
-      <div className="annotation"><span>02</span><p>Progress describes the day; it does not grade it.</p></div>
-      <div className="annotation"><span>03</span><p>Adventure resources persist independently from streaks.</p></div>
-      <div className="review-status"><span className="status-dot" />Clickable prototype<br /><small>Try a predicted meal, then open the AI field.</small></div>
-    </aside>
-
-    <main className="phone-stage">
-      <div className="phone-frame">
-        <div className="status-bar"><span>9:41</span><span>▰ ◌ ▰</span></div>
-        <header className="app-header"><div><span className="eyebrow">Wednesday, October 18</span><h2>{page === "history" ? "Your history" : page === "adventure" ? "Adventure" : restaurant ? "Dinner nearby" : "Good morning, Alex"}</h2></div><button className="avatar">AR</button></header>
-
-        {page === "dashboard" && <>
-          <section className="daily-brief">
-            <div className="daily-brief-row"><Ring /><div className="daily-brief-side"><div><span className="eyebrow">Daily log</span><h3>{logged ? "3 of 4 moments" : "2 of 4 moments"}</h3></div><div className="meal-segments"><span className="done">Breakfast</span><span className="done">Lunch</span><span>Dinner</span><span>Snacks</span></div></div></div>
-          </section>
-          <section className="metrics-card"><div className="section-label"><span>Neutral snapshot</span><button onClick={() => toast("Macro targets are adjustable in settings.")}><CircleHelp size={14} /></button></div><div className="metric-row"><div><strong>1,240</strong><span>calories</span></div><div><strong>72g</strong><span>protein</span></div><div><strong>48g</strong><span>fat</span></div><div><strong>116g</strong><span>carbs</span></div></div><div className="metric-lines"><i style={{ width: "62%" }} /><i style={{ width: "48%" }} /><i style={{ width: "36%" }} /><i style={{ width: "55%" }} /></div></section>
-          <section className="suggestions"><div className="section-label"><span>{restaurant ? "Likely at this place" : "Next Meal"}</span><button onClick={() => setRestaurant(!restaurant)}>{restaurant ? "Exit restaurant" : "Try restaurant mode"}</button></div>{restaurant && <div className="restaurant-strip"><MapPin size={14} /><span><strong>Juniper Kitchen</strong> · recognized nearby</span><button onClick={() => setSheet("restaurant")}>View context</button></div>}{(restaurant ? meals.slice().reverse() : meals).map((meal) => <button className="meal-card" key={meal.name} onClick={() => setSheet("meal")}>{meal.image ? <img src={meal.image} alt="" /> : <span className="meal-placeholder" aria-hidden="true"><Utensils size={16} /></span>}<span className="meal-card-copy"><strong>{meal.name}</strong><small>{meal.meta}</small><small>{meal.kcal}</small></span><ChevronRight size={18} /></button>)}<button className="none-button" onClick={() => toast("Marked Dinner as Skipped / None")}>＋ Skipped / None</button></section>
-          <div className="capture-bar"><button className="capture-main" onClick={() => setSheet("text")}><span className="capture-spark"><Sparkles size={15} /></span><span>What did you eat?</span></button><div className="capture-actions"><button onClick={() => setSheet("voice")} aria-label="Use voice"><Mic size={16} /></button><button onClick={() => imageInputRef.current?.click()} aria-label="Choose a photo"><Camera size={16} /></button><input ref={imageInputRef} className="visually-hidden" type="file" accept="image/*" capture="environment" onChange={() => toast.success("Photo estimate logged — Edit or Undo from the confirmation.")} /></div></div>
-        </>}
-
-        {page === "history" && <section className="page-content"><div className="history-summary"><span className="eyebrow">October 2023</span></div><div className="calendar"><div className="weekdays">{["M","T","W","T","F","S","S"].map((x, i) => <span key={i}>{x}</span>)}</div><div className="days">{Array.from({ length: 31 }, (_, i) => <button key={i} className={i < 7 ? "day done-day" : i === 17 ? "day today-day" : "day"} onClick={() => i === 17 && setRecovery(true)}>{i + 1}</button>)}</div></div><div className="history-item"><div className="history-icon"><Check size={16} /></div><div><strong>Oct 17 · Tuesday</strong><span>4 moments logged · 40 energy</span></div><ChevronRight size={16} /></div><div className="history-item"><div className="history-icon"><RotateCcw size={16} /></div><div><strong>Oct 16 · Monday</strong><span>3 moments · Recovery available</span></div><button onClick={() => setRecovery(true)}>Edit</button></div></section>}
-
-        {page === "adventure" && <section className="page-content adventure-page" aria-label="Adventure placeholder" />}
-        <AppNav page={page} setPage={setPage} />
-      </div>
-      <div className="stage-caption"><span>INTERACTION 01</span><span>IPHONE / 390 × 844</span></div>
-    </main>
-
-    {sheet === "meal" && <Sheet eyebrow="Predicted meal" onClose={() => setSheet(null)}><h3 className="sheet-title">Salmon grain bowl</h3><p className="sheet-subtitle">Preselected from your usual order.</p><div className="portion-row"><div><span className="eyebrow">Portion</span><strong>Full bowl</strong></div><span className="exact">2 cups</span><button className="mini-button">Change</button></div><div className="ingredient-list"><div className="section-label"><span>Likely ingredients</span><span className="muted">Tap to swap</span></div>{["salmon", "rice", "greens", "berries"].map((item) => <button key={item} className={ingredients.includes(item) ? "ingredient selected" : "ingredient"} onClick={() => toggleIngredient(item)}><span>{ingredients.includes(item) ? <Check size={14} /> : <Plus size={14} />}</span>{item}</button>)}<button className="swap-link" onClick={() => toggleIngredient("banana")}>+ swap berries for banana</button></div><div className="estimate"><span>Estimated nutrition</span><strong>620 kcal</strong><small>34g protein · 22g fat · 68g carbs</small></div><button className="primary-button" onClick={logMeal}>Log this meal <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
-    {sheet === "text" && <Sheet eyebrow="AI meal log" onClose={() => setSheet(null)}><div className="chat-intro"><div className="chat-avatar"><Sparkles size={17} /></div><div><strong>MealTrack AI</strong><small>Only asks what it needs</small></div></div><div className="chat-thread" aria-live="polite">{chatMessages.map((message, index) => <div key={`${message.role}-${index}`} className={`chat-message ${message.role}`}><span>{message.text}</span></div>)}</div><div className="chat-composer"><input autoFocus value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") sendChat(); }} placeholder={chatStep === 0 ? "e.g. turkey sandwich and an apple" : "e.g. about half a sandwich"} aria-label="Reply to MealTrack AI" /><button onClick={sendChat} aria-label="Send reply"><Send size={16} /></button></div>{chatStep > 0 && <button className="primary-button" onClick={() => { setSheet(null); toast.success("AI estimate logged — Edit or Undo from the confirmation."); }}>Log with this estimate <Check size={16} /></button>}<button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
-    {sheet === "voice" && <Sheet eyebrow="Voice entry" onClose={() => setSheet(null)}><div className="voice-mark"><Mic size={22} /></div><h3 className="sheet-title">Say what you ate.</h3><p className="sheet-subtitle">We’ll turn your words into a meal estimate you can edit.</p><button className="voice-listen" onClick={() => toast("Listening… say what you ate") }><Mic size={20} /><span>Tap to speak</span></button><button className="primary-button" onClick={() => { setSheet(null); toast.success("Voice estimate logged — Edit or Undo from the confirmation."); }}>Log estimate <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
-    {sheet === "restaurant" && <Sheet eyebrow="Restaurant context" onClose={() => setSheet(null)}><div className="location-heading"><MapPin size={20} /><div><h3>Juniper Kitchen</h3><p>Recognized nearby · 6 previous visits</p></div></div><div className="menu-note"><Sparkles size={15} /><span>Reliable menu data found</span></div><button className="meal-card compact" onClick={() => { setSheet("meal"); setRestaurant(true); }}><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>Harvest bowl</strong><small>Previously ordered · 540 kcal</small></span><ChevronRight size={18} /></button><button className="meal-card compact"><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>View full menu</strong><small>Browse reliable menu items</small></span><ChevronRight size={18} /></button><div className="fallback"><span>No reliable data?</span><div className="fallback-actions"><button onClick={() => imageInputRef.current?.click()}>Photo</button><button onClick={() => setSheet("voice")}>Voice</button><button onClick={() => setSheet("text")}>Text</button></div></div></Sheet>}
-    {recovery && <Sheet eyebrow="Streak recovery" onClose={() => setRecovery(false)}><div className="recovery-icon"><RotateCcw size={22} /></div><h3 className="sheet-title">Want to complete Monday?</h3><p className="sheet-subtitle">Your streak paused because the day was incomplete. Editing the prior day can restore it. Your 120 adventure energy is safe either way.</p><button className="primary-button" onClick={() => { setRecovery(false); toast.success("Monday completed — 7 day streak restored"); }}>Review Monday <ChevronRight size={16} /></button><button className="text-button" onClick={() => setRecovery(false)}>Not now</button></Sheet>}
-  </div>;
+  return <main className="phase2-board">
+    <header className="phase2-header"><div className="phase2-brand"><img src="/manus-storage/mealtrack-mark_41ae0274.png" alt="" /><span>MEALTRACK<small>PHASE 02 / VISUAL EXPLORATION</small></span></div><div className="phase2-title"><span className="eyebrow">Five directions · same approved UX</span><h1>Make the next log<br /><em>feel like you.</em></h1><p>Dashboard and meal-detail comparisons for an adult, motivating, iPhone-native meal tracker. Every option keeps the prediction, neutral macro snapshot, direct capture, and one clear Log action unchanged.</p></div><div className="phase2-license"><span>ASSET SOURCES</span><strong>Fonts: Google Fonts / OFL</strong><strong>Icons: open-source sets</strong><strong>Food: user, open, or generated</strong></div></header>
+    <section className="direction-rail" aria-label="Five visual design directions">{directions.map((direction) => <DirectionCard key={direction.id} direction={direction} />)}</section>
+    <footer className="phase2-footer"><span>COMPARE ON THE SAME QUESTIONS</span><p>Which direction makes the predicted meal most obvious? Which keeps nutrition neutral? Which feels most adult and native to iPhone? Which gives imagery a useful recognition role without decorative noise?</p></footer>
+  </main>;
 }
