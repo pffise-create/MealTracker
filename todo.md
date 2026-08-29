@@ -1,6 +1,6 @@
-# Phase 2 color refinement
+# Electric Blue refinement
 
-- [x] Replace Bright Signal with an electric-blue-on-white direction.
-- [x] Add a lime-green/yellow direction using the same approved UX.
-- [x] Keep Mineral Calm unchanged.
-- [x] Verify the three-option comparison and save a new checkpoint.
+- [x] Remove Mineral Calm and Lime & Sun from the active comparison canvas.
+- [x] Make Electric Blue the sole active visual direction.
+- [x] Verify the single-direction prototype at desktop and iPhone sizes.
+- [x] Save a new checkpoint and push it to pffise-create/MealTracker.
