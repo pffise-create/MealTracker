@@ -86,3 +86,8 @@ The review should compare the options on the same five questions: Which directio
 ### Licensing note
 
 The font families named above are intended to be sourced from Google Fonts or their official repositories under the SIL Open Font License. Lucide, Phosphor, Tabler, and Radix Icons are permissively licensed open-source icon sets as noted in the table. User-generated photos must be treated as user-owned content. Open Food Facts imagery requires attribution and compliance with its database and image-license terms. Openly licensed photography and emoji/illustration sources should be cited in the product’s asset notes when used. Generated placeholders are used only where no licensed or user-supplied image is available.
+
+
+## Phase 2 refinement decision
+
+The comparison set is intentionally reduced to two directions for focused review: **Mineral Calm** is retained as Option 2 from the original exploration, and **Bright Signal** is added as a new bright-color alternative. Warm Editorial, Citrus Ledger, Night Kitchen, and Coastal Utility are retired from the active comparison canvas. Both remaining options preserve the same dashboard and meal-detail UX.

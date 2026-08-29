@@ -1,6 +1,7 @@
-# Phase 2 visual exploration
+# Phase 2 refinement
 
-- [x] Define five meaningfully different visual directions while preserving the approved UX.
-- [x] Document typography, icon, palette, card, button, ring, input, imagery, and tradeoff criteria for each direction.
-- [x] Build a side-by-side comparison canvas with the shared dashboard and meal-detail sheet structure.
-- [x] Verify the five options at desktop and iPhone sizes, then save a checkpoint.
+- [x] Keep Mineral Calm as the retained direction.
+- [x] Remove Warm Editorial, Citrus Ledger, Night Kitchen, and Coastal Utility.
+- [x] Add one bright-color visual direction beside Mineral Calm.
+- [x] Preserve the shared dashboard and meal-detail UX.
+- [x] Verify the two-option comparison and save a new checkpoint.
