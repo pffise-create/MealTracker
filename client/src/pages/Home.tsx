@@ -3,23 +3,19 @@
  * Keep hierarchy, predicted actions, neutral progress, and low-friction capture visible.
  * This page is intentionally grayscale and low fidelity until the wireframe is approved.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowLeft,
-  BookOpen,
   Camera,
   Check,
   ChevronRight,
   CircleHelp,
   Clock3,
   Compass,
-  Image as ImageIcon,
   MapPin,
   Mic,
-  MoreHorizontal,
   Plus,
   RotateCcw,
-  Search,
   Sparkles,
   Utensils,
   X,
@@ -53,11 +49,12 @@ function AppNav({ page, setPage }: { page: string; setPage: (p: string) => void 
 
 export default function Home() {
   const [page, setPage] = useState("dashboard");
-  const [sheet, setSheet] = useState<"meal" | "capture" | "end" | "restaurant" | null>(null);
+  const [sheet, setSheet] = useState<"meal" | "text" | "voice" | "end" | "restaurant" | null>(null);
   const [restaurant, setRestaurant] = useState(false);
   const [ingredients, setIngredients] = useState(["salmon", "rice", "greens", "berries"]);
   const [logged, setLogged] = useState(false);
   const [recovery, setRecovery] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const logMeal = () => { setLogged(true); setSheet(null); toast.success("Logged — +1 consistency resource banked", { description: "You can edit this meal anytime." }); };
   const toggleIngredient = (name: string) => setIngredients((items) => items.includes(name) ? items.filter((i) => i !== name) : [...items, name]);
@@ -86,7 +83,7 @@ export default function Home() {
           </section>
           <section className="metrics-card"><div className="section-label"><span>Neutral snapshot</span><button onClick={() => toast("Macro targets are adjustable in settings.")}><CircleHelp size={14} /></button></div><div className="metric-row"><div><strong>1,240</strong><span>calories</span></div><div><strong>72g</strong><span>protein</span></div><div><strong>48g</strong><span>fat</span></div><div><strong>116g</strong><span>carbs</span></div></div><div className="metric-lines"><i style={{ width: "62%" }} /><i style={{ width: "48%" }} /><i style={{ width: "36%" }} /><i style={{ width: "55%" }} /></div></section>
           <section className="suggestions"><div className="section-label"><span>{restaurant ? "Likely at this place" : "Next Meal"}</span><button onClick={() => setRestaurant(!restaurant)}>{restaurant ? "Exit restaurant" : "Try restaurant mode"}</button></div>{restaurant && <div className="restaurant-strip"><MapPin size={14} /><span><strong>Juniper Kitchen</strong> · recognized nearby</span><button onClick={() => setSheet("restaurant")}>View context</button></div>}{(restaurant ? meals.slice().reverse() : meals).map((meal) => <button className="meal-card" key={meal.name} onClick={() => setSheet("meal")}>{meal.image ? <img src={meal.image} alt="" /> : <span className="meal-placeholder" aria-hidden="true"><Utensils size={16} /></span>}<span className="meal-card-copy"><strong>{meal.name}</strong><small>{meal.meta}</small><small>{meal.kcal}</small></span><ChevronRight size={18} /></button>)}<button className="none-button" onClick={() => toast("Marked Dinner as Skipped / None")}>＋ Skipped / None</button></section>
-          <button className="capture-bar" onClick={() => setSheet("capture")}><span className="capture-spark"><Sparkles size={15} /></span><span>What did you eat?</span><span className="capture-actions"><Mic size={16} /><Camera size={16} /></span></button>
+          <div className="capture-bar"><button className="capture-main" onClick={() => setSheet("text")}><span className="capture-spark"><Sparkles size={15} /></span><span>What did you eat?</span></button><div className="capture-actions"><button onClick={() => setSheet("voice")} aria-label="Use voice"><Mic size={16} /></button><button onClick={() => imageInputRef.current?.click()} aria-label="Choose a photo"><Camera size={16} /></button><input ref={imageInputRef} className="visually-hidden" type="file" accept="image/*" capture="environment" onChange={() => toast.success("Photo estimate logged — Edit or Undo from the confirmation.")} /></div></div>
         </>}
 
         {page === "history" && <section className="page-content"><div className="history-summary"><span className="eyebrow">October 2023</span><h3>Small actions, visible over time.</h3><p>Incomplete days can be recovered. Adventure energy stays banked.</p></div><div className="calendar"><div className="weekdays">{["M","T","W","T","F","S","S"].map((x, i) => <span key={i}>{x}</span>)}</div><div className="days">{Array.from({ length: 31 }, (_, i) => <button key={i} className={i < 7 ? "day done-day" : i === 17 ? "day today-day" : "day"} onClick={() => i === 17 && setRecovery(true)}>{i + 1}</button>)}</div></div><div className="history-item"><div className="history-icon"><Check size={16} /></div><div><strong>Oct 17 · Tuesday</strong><span>4 moments logged · 40 energy</span></div><ChevronRight size={16} /></div><div className="history-item"><div className="history-icon"><RotateCcw size={16} /></div><div><strong>Oct 16 · Monday</strong><span>3 moments · Recovery available</span></div><button onClick={() => setRecovery(true)}>Edit</button></div></section>}
@@ -98,8 +95,9 @@ export default function Home() {
     </main>
 
     {sheet === "meal" && <Sheet eyebrow="Predicted meal" onClose={() => setSheet(null)}><h3 className="sheet-title">Salmon grain bowl</h3><p className="sheet-subtitle">Preselected from your usual order.</p><div className="portion-row"><div><span className="eyebrow">Portion</span><strong>Full bowl</strong></div><span className="exact">2 cups</span><button className="mini-button">Change</button></div><div className="ingredient-list"><div className="section-label"><span>Likely ingredients</span><span className="muted">Tap to swap</span></div>{["salmon", "rice", "greens", "berries"].map((item) => <button key={item} className={ingredients.includes(item) ? "ingredient selected" : "ingredient"} onClick={() => toggleIngredient(item)}><span>{ingredients.includes(item) ? <Check size={14} /> : <Plus size={14} />}</span>{item}</button>)}<button className="swap-link" onClick={() => toggleIngredient("banana")}>+ swap berries for banana</button></div><div className="estimate"><span>Estimated nutrition</span><strong>620 kcal</strong><small>34g protein · 22g fat · 68g carbs</small></div><button className="primary-button" onClick={logMeal}>Log this meal <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
-    {sheet === "capture" && <Sheet eyebrow="Quick capture" onClose={() => setSheet(null)}><h3 className="sheet-title">Use the easiest input.</h3><p className="sheet-subtitle">You can edit any estimate after it is logged.</p><div className="capture-grid"><button onClick={() => { setSheet(null); toast("Photo estimate logged — Edit or Undo from the confirmation."); }}><Camera size={22} /><strong>Take a photo</strong><small>Best estimate, no confirmation</small></button><button onClick={() => toast("Listening… say what you ate") }><Mic size={22} /><strong>Use your voice</strong><small>“Turkey sandwich…”</small></button><button onClick={() => toast("Photo library opened") }><ImageIcon size={22} /><strong>Choose a photo</strong><small>From your library</small></button><button onClick={() => toast("Text entry ready") }><Search size={22} /><strong>Type it in</strong><small>Search foods or meals</small></button></div></Sheet>}
-    {sheet === "restaurant" && <Sheet eyebrow="Restaurant context" onClose={() => setSheet(null)}><div className="location-heading"><MapPin size={20} /><div><h3>Juniper Kitchen</h3><p>Recognized nearby · 6 previous visits</p></div></div><div className="menu-note"><Sparkles size={15} /><span>Reliable menu data found</span></div><button className="meal-card compact" onClick={() => { setSheet("meal"); setRestaurant(true); }}><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>Harvest bowl</strong><small>Previously ordered · 540 kcal</small></span><ChevronRight size={18} /></button><button className="meal-card compact"><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>View full menu</strong><small>Browse reliable menu items</small></span><ChevronRight size={18} /></button><div className="fallback"><span>No reliable data?</span><button onClick={() => setSheet("capture")}>Use photo, voice, or text</button></div></Sheet>}
+    {sheet === "text" && <Sheet eyebrow="Text entry" onClose={() => setSheet(null)}><h3 className="sheet-title">Tell us what you ate.</h3><p className="sheet-subtitle">Start with the simplest version. You can edit the estimate after logging.</p><textarea className="text-entry" autoFocus placeholder="e.g. turkey sandwich and an apple" /><button className="primary-button" onClick={() => { setSheet(null); toast.success("Text estimate logged — Edit or Undo from the confirmation."); }}>Log this meal <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
+    {sheet === "voice" && <Sheet eyebrow="Voice entry" onClose={() => setSheet(null)}><div className="voice-mark"><Mic size={22} /></div><h3 className="sheet-title">Say what you ate.</h3><p className="sheet-subtitle">We’ll turn your words into a meal estimate you can edit.</p><button className="voice-listen" onClick={() => toast("Listening… say what you ate") }><Mic size={20} /><span>Tap to speak</span></button><button className="primary-button" onClick={() => { setSheet(null); toast.success("Voice estimate logged — Edit or Undo from the confirmation."); }}>Log estimate <Check size={16} /></button><button className="text-button" onClick={() => setSheet(null)}>Cancel</button></Sheet>}
+    {sheet === "restaurant" && <Sheet eyebrow="Restaurant context" onClose={() => setSheet(null)}><div className="location-heading"><MapPin size={20} /><div><h3>Juniper Kitchen</h3><p>Recognized nearby · 6 previous visits</p></div></div><div className="menu-note"><Sparkles size={15} /><span>Reliable menu data found</span></div><button className="meal-card compact" onClick={() => { setSheet("meal"); setRestaurant(true); }}><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>Harvest bowl</strong><small>Previously ordered · 540 kcal</small></span><ChevronRight size={18} /></button><button className="meal-card compact"><div className="menu-placeholder"><Utensils size={18} /></div><span className="meal-card-copy"><strong>View full menu</strong><small>Browse reliable menu items</small></span><ChevronRight size={18} /></button><div className="fallback"><span>No reliable data?</span><div className="fallback-actions"><button onClick={() => imageInputRef.current?.click()}>Photo</button><button onClick={() => setSheet("voice")}>Voice</button><button onClick={() => setSheet("text")}>Text</button></div></div></Sheet>}
     {recovery && <Sheet eyebrow="Streak recovery" onClose={() => setRecovery(false)}><div className="recovery-icon"><RotateCcw size={22} /></div><h3 className="sheet-title">Want to complete Monday?</h3><p className="sheet-subtitle">Your streak paused because the day was incomplete. Editing the prior day can restore it. Your 120 adventure energy is safe either way.</p><button className="primary-button" onClick={() => { setRecovery(false); toast.success("Monday completed — 7 day streak restored"); }}>Review Monday <ChevronRight size={16} /></button><button className="text-button" onClick={() => setRecovery(false)}>Not now</button></Sheet>}
   </div>;
 }
