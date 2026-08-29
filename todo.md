@@ -1,5 +1,6 @@
 # Refinement tasks
 
-- [x] Remove the consistency and banked ribbon from the dashboard layout.
-- [x] Reflow the dashboard so predicted meal cards and the capture bar have more tappable space.
-- [x] Verify the revised mobile layout and save a new checkpoint.
+- [x] Reduce the size of the daily logging dial.
+- [x] Remove the “No pressure — just keep the thread.” supporting sentence.
+- [x] Rename “You usually eat around now” to “Next Meal.”
+- [x] Verify the revised dashboard and save a new checkpoint.
