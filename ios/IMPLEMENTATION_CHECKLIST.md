@@ -15,7 +15,7 @@
 - [x] Neutral calorie, protein, fat, and carbohydrate progress
 - [x] Predicted meals with editable portions, ingredients, and swaps
 - [x] Persistent logging, immediate totals, rewards, haptic confirmation, Edit, and Undo
-- [x] Persistent capture entry point and honest demo estimator flows
+- [x] Persistent capture entry point, private-backend OpenAI text/photo estimator, and honest local demo fallback
 
 ## Day lifecycle and history
 
@@ -30,7 +30,8 @@
 - [x] Foreground location/venue UI with denied and unreliable-menu fallbacks
 - [x] Protocols for text/photo analysis, voice, location, menu, HealthKit, and adventure generation
 - [x] Native contextual camera, photo-library, speech, location, and HealthKit seams
-- [x] Banked resource ledger and limited premium Adventure entry state
+- [x] Banked resource ledger and persistent deterministic Adventure campaign
+- [x] Five-region map, companion recruitment, quest log, inventory, consequential choices, dice, death, and one-use resurrection
 
 ## Verification
 
@@ -39,5 +40,16 @@
 - [x] Accessibility identifiers, Dynamic Type layouts, VoiceOver labels, and Reduce Motion support
 - [x] Static parsing of every Swift source plus Xcode project, scheme, plist, entitlement, and asset metadata
 - [x] Preserved React wireframe passes `pnpm check` and its full production build (existing analytics/dependency warnings remain)
-- [ ] `xcodebuild` build/test on an iPhone simulator (blocked: this Linux runtime has no Xcode)
-- [ ] Simulator visual inspection on standard/small iPhones in light/dark/large text (blocked: this Linux runtime has no iOS simulator)
+- [x] Xcode 26.3 Debug build succeeds for the `MealTracker` scheme against the iOS 26.2 simulator runtime
+- [x] All 17 unit tests pass on iPhone 17 (4 Adventure, 7 domain, 6 persistence/store)
+- [x] All 5 UI tests pass on iPhone 17, covering log/edit/undo, skipped/day completion, historical recovery, primary navigation, and Adventure World/Company/Records
+- [x] Adventure screenshots inspected on iPhone 17 in light and dark appearances
+- [x] Adventure UI test and screenshot inspection pass on the smallest installed simulator (iPhone 16e) in light mode
+- [x] Adventure UI test and screenshot inspection pass on iPhone 17 in dark mode at Accessibility XXXL
+
+## Live-service boundary
+
+- [x] OpenAI Responses API request is server-only, schema constrained, runtime validated, and configured with response storage disabled
+- [x] The iPhone sends text or photo inputs to an HTTPS backend and stores only the separate backend access token in Keychain
+- [x] Missing URL/token/provider failures become explicit unavailable/demo states; no API key ships in the app bundle
+- [ ] End-to-end live OpenAI response verified against a deployed backend (requires operator-provided server secrets and HTTPS URL)

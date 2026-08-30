@@ -12,9 +12,9 @@ The native first milestone is local-first and deliberately optimizes one complet
 - macOS with Xcode 16 or newer
 - iOS 17 or newer iPhone or simulator
 - An Apple Developer team selected in Xcode for installation on a physical iPhone
-- Node 20+ and pnpm 10.x only if you want to run the React wireframe
+- Node 20+ and pnpm 10.x to run the React wireframe or private AI backend
 
-No AI, search, or menu API key is required for this milestone. No secret belongs in the iOS project, source, build settings, plist, or app bundle.
+The app remains usable without AI configuration through its clearly labeled local demo estimator. Live nutrition analysis requires a server-side OpenAI API key; no provider secret belongs in the iOS project, source, build settings, plist, or app bundle.
 
 ## Open and run the native app
 
@@ -41,7 +41,7 @@ Build without code signing:
 xcodebuild \
   -project ios/MealTracker/MealTracker.xcodeproj \
   -scheme MealTracker \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
   CODE_SIGNING_ALLOWED=NO \
   build
 ```
@@ -52,12 +52,12 @@ Run unit and UI tests:
 xcodebuild \
   -project ios/MealTracker/MealTracker.xcodeproj \
   -scheme MealTracker \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
   CODE_SIGNING_ALLOWED=NO \
   test
 ```
 
-Repeat visual verification on a standard iPhone simulator and a small supported iPhone simulator. Check light mode, dark mode, and an Accessibility Dynamic Type size. The current execution environment used to author this milestone is Linux and does not contain Xcode or an iOS simulator, so those Mac-only commands and screenshot checks still need to be run before calling the build release-verified.
+Repeat visual verification on a standard iPhone simulator and a small supported iPhone simulator. Check light mode, dark mode, and an Accessibility Dynamic Type size. Exact completed verification results are recorded in [ios/IMPLEMENTATION_CHECKLIST.md](ios/IMPLEMENTATION_CHECKLIST.md).
 
 ## Run the preserved wireframe
 
@@ -95,7 +95,7 @@ See [ios/ARCHITECTURE.md](ios/ARCHITECTURE.md) for the lifecycle and reward inva
 - Apple Health is read-only and queried on demand; Health history is not copied into SwiftData.
 - Denied optional permissions are normal UI states with fallback logging.
 
-The milestone is local-only. Encrypted iCloud sync, export/delete tooling, reminder scheduling, and a production private backend remain outside this slice.
+Meal data remains local. Encrypted iCloud sync, export/delete tooling, and reminder scheduling remain outside this slice. AI calls use the optional private backend described below.
 
 ## Real versus demo integrations
 
@@ -106,11 +106,11 @@ The milestone is local-only. Encrypted iCloud sync, export/delete tooling, remin
 | Foreground nearby venues | Native Core Location + MapKit |
 | Apple Health reads | Native, contextual, read-only HealthKit |
 | Camera and photo selection | Native camera and Photos picker |
-| Text/photo nutrition analysis | Explicitly labeled local demo estimator |
+| Text/photo nutrition analysis | OpenAI `gpt-4o-mini` through an optional private backend; explicit local demo fallback |
 | Restaurant menu lookup | Explicit no-reliable-menu provider and complete fallbacks |
-| Adventure generation | Explicit limited demo provider; rewards are real and persistent |
+| Adventure | Persistent deterministic campaign with map, companions, quests, inventory, choices, dice, death, and one-use resurrection |
 
-Production providers should be implemented behind the existing protocols and call a private TLS backend. See [ios/CONFIGURATION.md](ios/CONFIGURATION.md).
+The OpenAI key is server-only; the app stores its separate backend access token in Keychain. See [ios/CONFIGURATION.md](ios/CONFIGURATION.md) for deployment and Xcode configuration.
 
 ## Visual and accessibility QA
 
@@ -127,9 +127,9 @@ Before a physical-device handoff, verify:
 
 ## Known limitations
 
-- The authoring runtime cannot execute `xcodebuild`, simulator UI tests, or visual screenshot inspection.
-- AI nutrition and restaurant menu providers require a private backend and are intentionally demo/unavailable, never presented as live.
-- iCloud sync, notifications, export/deletion, and the full adventure game are not in the first engineering milestone.
+- Live AI nutrition requires deploying the included backend route and setting its HTTPS base URL in Xcode.
+- Restaurant menu providers remain intentionally unavailable, never presented as live.
+- iCloud sync, notifications, and export/deletion are not in the first engineering milestone.
 - The app is configured for direct Xcode installation, not App Store distribution.
 
 Third-party licenses are recorded in [ASSET_LICENSES.md](ASSET_LICENSES.md). Progress is tracked in [ios/IMPLEMENTATION_CHECKLIST.md](ios/IMPLEMENTATION_CHECKLIST.md).
