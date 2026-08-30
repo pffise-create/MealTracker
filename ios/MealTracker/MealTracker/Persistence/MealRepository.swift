@@ -20,9 +20,13 @@ protocol MealRepository: AnyObject {
 @MainActor
 final class SwiftDataMealRepository: MealRepository {
     private let context: ModelContext
+    // ModelContext does not guarantee that a locally-created container remains
+    // alive. Retaining it here also makes in-memory repositories safe in tests.
+    private let container: ModelContainer
 
     init(context: ModelContext) {
         self.context = context
+        container = context.container
     }
 
     func ensureDay(identifier: String, timeZoneIdentifier: String) throws {

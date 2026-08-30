@@ -31,6 +31,7 @@ final class MealTrackerStore: ObservableObject {
     @Published private(set) var venueState: AsyncViewState<[VenueCandidate]> = .idle
     @Published private(set) var menuState: AsyncViewState<RestaurantMenuResult> = .idle
     @Published private(set) var healthState: AsyncViewState<HealthContextSnapshot> = .idle
+    @Published private(set) var adventure: AdventureState
 
     let voiceTranscriber: any VoiceTranscribing
     let venueResolver: any VenueResolving
@@ -43,6 +44,7 @@ final class MealTrackerStore: ObservableObject {
     private let photoAnalyzer: any MealPhotoAnalyzing
     private let menuService: any RestaurantMenuSearching
     private let adventureGenerator: any AdventureContentGenerating
+    private let adventurePersistence: any AdventureStatePersisting
     private let templates: [MealTemplate]
 
     init(
@@ -56,6 +58,7 @@ final class MealTrackerStore: ObservableObject {
         menuService: any RestaurantMenuSearching = DemoRestaurantMenuService(),
         healthKit: any HealthKitReading,
         adventureGenerator: any AdventureContentGenerating = DemoAdventureContentGenerator(),
+        adventurePersistence: (any AdventureStatePersisting)? = nil,
         templates: [MealTemplate] = SeedMealCatalog.templates
     ) {
         self.repository = repository
@@ -68,6 +71,9 @@ final class MealTrackerStore: ObservableObject {
         self.menuService = menuService
         self.healthKit = healthKit
         self.adventureGenerator = adventureGenerator
+        let resolvedAdventurePersistence = adventurePersistence ?? UserDefaultsAdventureStatePersistence()
+        self.adventurePersistence = resolvedAdventurePersistence
+        adventure = resolvedAdventurePersistence.load() ?? .initial
         self.templates = templates
         let identifier = LocalDayResolver.identifier(for: clock.now, in: clock.timeZone)
         today = DaySnapshot(
@@ -334,6 +340,23 @@ final class MealTrackerStore: ObservableObject {
             return try await adventureGenerator.entryCopy(resourceBalance: resourceBalance)
         } catch {
             return "Your banked resources are safe. Adventure content is temporarily unavailable."
+        }
+    }
+
+    var adventureEnergyBalance: Int {
+        max(0, resourceBalance - adventure.energySpent)
+    }
+
+    func chooseAdventure(_ choice: AdventureChoiceID) {
+        perform {
+            let updated = try AdventureEngine.resolve(
+                choice,
+                in: adventure,
+                availableEnergy: adventureEnergyBalance
+            )
+            try adventurePersistence.save(updated)
+            adventure = updated
+            Haptics.selection()
         }
     }
 
