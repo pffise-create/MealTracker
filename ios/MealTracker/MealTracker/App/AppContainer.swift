@@ -16,8 +16,11 @@ final class AppContainer {
             configurations: configuration
         )
         let repository = SwiftDataMealRepository(context: modelContainer.mainContext)
+        let analyzer: any MealTextAnalyzing & MealPhotoAnalyzing = BackendMealAnalyzer() ?? DemoMealAnalyzer()
         store = MealTrackerStore(
             repository: repository,
+            textAnalyzer: analyzer,
+            photoAnalyzer: analyzer,
             voiceTranscriber: LiveSpeechTranscriber(),
             venueResolver: LiveVenueResolver(),
             healthKit: LiveHealthKitService()

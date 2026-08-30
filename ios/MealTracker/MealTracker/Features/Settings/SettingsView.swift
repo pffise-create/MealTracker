@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: MealTrackerStore
     @Environment(\.dismiss) private var dismiss
     @State private var settings: UserSettings = .defaults
+    @State private var backendToken = ""
 
     var body: some View {
         NavigationStack {
@@ -24,13 +25,17 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         store.saveSettings(settings)
+                        try? BackendCredentialStore.save(accessToken: backendToken)
                         dismiss()
                     }
                     .accessibilityIdentifier("settings.save")
                 }
             }
         }
-        .onAppear { settings = store.settings }
+        .onAppear {
+            settings = store.settings
+            backendToken = BackendCredentialStore.accessToken ?? ""
+        }
     }
 
     private var targetsCard: some View {
@@ -104,13 +109,23 @@ struct SettingsView: View {
     private var integrationCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             cardTitle("Integration status", icon: .info)
-            statusRow("Text & photo nutrition", "Demo estimator")
+            statusRow("Text & photo nutrition", BackendMealAnalyzer() == nil ? "Demo estimator" : "OpenAI via private backend")
             statusRow("Voice transcription", "Native Speech framework")
             statusRow("Nearby venues", "Native Core Location + MapKit")
             statusRow("Restaurant menus", "No provider configured")
-            statusRow("Adventure content", "Limited demo provider")
-            Text("No API credentials or secrets are included in the app bundle.")
-                .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+            statusRow("Adventure", "Persistent local campaign")
+            if BackendMealAnalyzer() != nil {
+                SecureField("Backend access token", text: $backendToken)
+                    .textContentType(.password)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("Private backend access token")
+                Text("Stored only in this device’s Keychain. The OpenAI API key remains on the backend.")
+                    .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+            } else {
+                Text("Set MEALTRACKER_API_BASE_URL in Xcode to an HTTPS backend. No API credentials or secrets are included in the app bundle.")
+                    .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+            }
         }
         .padding(AppSpacing.md)
         .appSurface()

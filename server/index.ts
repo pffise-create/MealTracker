@@ -2,13 +2,161 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import { z } from "zod";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+type AnalysisRequest = {
+  category?: unknown;
+  text?: unknown;
+  imageBase64?: unknown;
+  mimeType?: unknown;
+};
+
+const nutritionSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["name", "items", "calories", "protein", "fat", "carbohydrates", "confidence", "assumptions"],
+  properties: {
+    name: { type: "string" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "quantity", "calories", "protein", "fat", "carbohydrates"],
+        properties: {
+          name: { type: "string" },
+          quantity: { type: "string" },
+          calories: { type: "number" },
+          protein: { type: "number" },
+          fat: { type: "number" },
+          carbohydrates: { type: "number" },
+        },
+      },
+    },
+    calories: { type: "number" },
+    protein: { type: "number" },
+    fat: { type: "number" },
+    carbohydrates: { type: "number" },
+    confidence: { type: "string", enum: ["low", "medium", "high"] },
+    assumptions: { type: "array", items: { type: "string" } },
+  },
+};
+
+const mealAnalysisValidator = z.object({
+  name: z.string().trim().min(1).max(120),
+  items: z.array(z.object({
+    name: z.string().trim().min(1).max(120),
+    quantity: z.string().trim().min(1).max(80),
+    calories: z.number().finite().min(0).max(10_000),
+    protein: z.number().finite().min(0).max(1_000),
+    fat: z.number().finite().min(0).max(1_000),
+    carbohydrates: z.number().finite().min(0).max(1_000),
+  }).strict()).min(1).max(20),
+  calories: z.number().finite().min(0).max(10_000),
+  protein: z.number().finite().min(0).max(1_000),
+  fat: z.number().finite().min(0).max(1_000),
+  carbohydrates: z.number().finite().min(0).max(1_000),
+  confidence: z.enum(["low", "medium", "high"]),
+  assumptions: z.array(z.string().trim().min(1).max(180)).max(8),
+}).strict();
+
+function category(value: unknown) {
+  return typeof value === "string" && ["breakfast", "lunch", "dinner", "snacks"].includes(value)
+    ? value
+    : "snacks";
+}
+
+function extractOutputText(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object") return undefined;
+  const response = payload as {
+    output_text?: unknown;
+    output?: Array<{ content?: Array<{ type?: unknown; text?: unknown }> }>;
+  };
+  if (typeof response.output_text === "string") return response.output_text;
+  for (const item of response.output ?? []) {
+    for (const content of item.content ?? []) {
+      if (content.type === "output_text" && typeof content.text === "string") return content.text;
+    }
+  }
+  return undefined;
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  app.use(express.json({ limit: "12mb" }));
+
+  app.post("/api/meal-analysis", async (req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const backendToken = process.env.MEALTRACKER_BACKEND_TOKEN;
+    if (!apiKey || !backendToken) {
+      res.status(503).json({ error: "Meal analysis is not configured on this server." });
+      return;
+    }
+    if (req.get("Authorization") !== `Bearer ${backendToken}`) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+
+    const body = req.body as AnalysisRequest;
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64 : "";
+    const mimeType = body.mimeType === "image/png" || body.mimeType === "image/jpeg" ? body.mimeType : "image/jpeg";
+    if (!text && !imageBase64) {
+      res.status(400).json({ error: "Provide a meal description or photo." });
+      return;
+    }
+
+    const content: Array<Record<string, string>> = [{
+      type: "input_text",
+      text: `Estimate nutrition for this ${category(body.category)} meal. Identify each distinct food, infer a reasonable consumed quantity when none is stated, calculate item macros, and ensure the top-level totals equal the sum of the items. Use non-negative finite numbers. Keep assumptions short and material. Return an editable single-meal estimate, not medical advice.`,
+    }];
+    if (text) content.push({ type: "input_text", text: `Meal description: ${text}` });
+    if (imageBase64) content.push({ type: "input_image", image_url: `data:${mimeType};base64,${imageBase64}` });
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          input: [{ role: "user", content }],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "meal_nutrition",
+              strict: true,
+              schema: nutritionSchema,
+            },
+          },
+          max_output_tokens: 600,
+          temperature: 0.2,
+          store: false,
+        }),
+      });
+      if (!response.ok) {
+        console.error("OpenAI meal analysis failed", response.status, await response.text());
+        res.status(502).json({ error: "Meal analysis is temporarily unavailable." });
+        return;
+      }
+
+      const outputText = extractOutputText(await response.json());
+      if (!outputText) throw new Error("OpenAI returned no structured output");
+      const analysis = mealAnalysisValidator.parse(JSON.parse(outputText));
+      const confidence = analysis.confidence;
+      res.json({ analysis, provenance: `AI estimate • ${confidence} confidence — review and edit if needed.` });
+    } catch (error) {
+      console.error("Meal analysis request failed", error);
+      res.status(502).json({ error: "Meal analysis is temporarily unavailable." });
+    }
+  });
 
   // Serve static files from dist/public in production
   const staticPath =

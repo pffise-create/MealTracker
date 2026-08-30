@@ -47,8 +47,9 @@ enum NutritionProvenance: String, Codable, Sendable {
     case database
     case starter
     case demoEstimate
+    case aiEstimate
 
-    var isEstimate: Bool { self == .demoEstimate }
+    var isEstimate: Bool { self == .demoEstimate || self == .aiEstimate }
 }
 
 enum MealInputMethod: String, Codable, CaseIterable, Sendable {

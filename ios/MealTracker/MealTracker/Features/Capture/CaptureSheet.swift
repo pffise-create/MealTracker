@@ -229,7 +229,7 @@ struct CaptureSheet: View {
     private var processingState: some View {
         VStack(spacing: AppSpacing.md) {
             ProgressView().controlSize(.large).tint(AppColors.brand)
-            Text("Preparing demo estimate…")
+            Text(BackendMealAnalyzer() == nil ? "Preparing demo estimate…" : "Analyzing your meal…")
                 .font(.appBody(.headline, weight: .semibold))
             disclosure
         }
@@ -239,7 +239,11 @@ struct CaptureSheet: View {
     private var disclosure: some View {
         HStack(alignment: .top, spacing: AppSpacing.xs) {
             LucideIcon(icon: .info, size: 15)
-            Text("Demo estimator: local sample rules, not live AI. The result logs optimistically with immediate Edit and Undo.")
+            Text(
+                BackendMealAnalyzer() == nil
+                    ? "Demo estimator: local sample rules, not live AI. The result logs optimistically with immediate Edit and Undo."
+                    : "AI estimate from your private backend. Review with Edit or remove it immediately with Undo."
+            )
         }
         .font(.appBody(.caption))
         .foregroundStyle(AppColors.muted)
