@@ -76,4 +76,59 @@ final class MealTrackerUITests: XCTestCase {
         app.tabBars.buttons["Adventure"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["adventure.balance"].waitForExistence(timeout: 2))
     }
+
+    func testLiveAIProducesDistinctNutrition() throws {
+        guard ProcessInfo.processInfo.environment["MEALTRACKER_LIVE_AI_TEST"] == "1" else {
+            throw XCTSkip("Set MEALTRACKER_LIVE_AI_TEST=1 to exercise the configured live backend.")
+        }
+
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+
+        let banana = try analyzeLiveMeal("one medium banana")
+        let salmonDinner = try analyzeLiveMeal("6 ounces grilled salmon, one cup cooked white rice, and one cup steamed broccoli")
+
+        XCTAssertTrue(70...150 ~= banana.calories, "A medium banana should be approximately 70–150 calories")
+        XCTAssertTrue(0...3 ~= banana.protein, "A medium banana should contain little protein")
+        XCTAssertTrue(500...950 ~= salmonDinner.calories, "The specified salmon dinner should be approximately 500–950 calories")
+        XCTAssertTrue(35...80 ~= salmonDinner.protein, "Six ounces of salmon should make this a high-protein dinner")
+        XCTAssertLessThan(banana.calories, salmonDinner.calories)
+        XCTAssertLessThan(banana.protein, salmonDinner.protein)
+        XCTAssertGreaterThan(salmonDinner.calories - banana.calories, 250)
+        XCTAssertGreaterThan(salmonDinner.protein - banana.protein, 20)
+    }
+
+    private func analyzeLiveMeal(_ description: String) throws -> (calories: Double, protein: Double) {
+        let capture = app.buttons["today.capture"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 8))
+        capture.tap()
+
+        let typeIt = app.buttons["capture.Type-it"]
+        XCTAssertTrue(typeIt.waitForExistence(timeout: 3))
+        typeIt.tap()
+
+        let text = app.textFields["capture.text"]
+        XCTAssertTrue(text.waitForExistence(timeout: 3))
+        text.tap()
+        text.typeText(description)
+        app.buttons["capture.logText"].tap()
+
+        let confirmation = app.descendants(matching: .any)["recent.confirmation"]
+        XCTAssertTrue(confirmation.waitForExistence(timeout: 90), "Live meal analysis did not finish")
+        app.buttons["recent.edit"].tap()
+
+        let caloriesField = app.textFields["entry.nutrition.calories"]
+        let proteinField = app.textFields["entry.nutrition.protein"]
+        XCTAssertTrue(caloriesField.waitForExistence(timeout: 4))
+        guard let calories = Double(caloriesField.value as? String ?? ""),
+              let protein = Double(proteinField.value as? String ?? "") else {
+            XCTFail("The AI result did not contain numeric nutrition")
+            throw NSError(domain: "MealTrackerLiveAITest", code: 1)
+        }
+
+        app.buttons["Cancel"].tap()
+        app.buttons["recent.undo"].tap()
+        return (calories, protein)
+    }
 }

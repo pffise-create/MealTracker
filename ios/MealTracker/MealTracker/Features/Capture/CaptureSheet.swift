@@ -89,7 +89,11 @@ struct CaptureSheet: View {
             Text("Log first. Correct if needed.")
                 .font(.appDisplay(.title2, weight: .bold))
                 .foregroundStyle(AppColors.ink)
-            Text("Text and photo nutrition use a clearly labeled local demo estimator in this build. Voice transcription is native. No original food photo is saved.")
+            Text(
+                BackendMealAnalyzer() == nil
+                    ? "Text and photo nutrition use a clearly labeled local demo estimator in this build. Voice transcription is native. No original food photo is saved."
+                    : "Text and photo nutrition use AI through your private backend. Results are estimates you can review and edit. No original food photo is saved."
+            )
                 .font(.appBody(.subheadline))
                 .foregroundStyle(AppColors.muted)
                 .fixedSize(horizontal: false, vertical: true)

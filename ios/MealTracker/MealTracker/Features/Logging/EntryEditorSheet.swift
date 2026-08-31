@@ -86,6 +86,7 @@ struct EntryEditorSheet: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 100)
+                .accessibilityIdentifier("entry.nutrition.\(label.lowercased())")
             Text(unit).foregroundStyle(AppColors.muted)
         }
     }
