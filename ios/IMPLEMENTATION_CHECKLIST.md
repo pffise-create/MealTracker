@@ -41,11 +41,13 @@
 - [x] Static parsing of every Swift source plus Xcode project, scheme, plist, entitlement, and asset metadata
 - [x] Preserved React wireframe passes `pnpm check` and its full production build (existing analytics/dependency warnings remain)
 - [x] Xcode 26.3 Debug build succeeds for the `MealTracker` scheme against the iOS 26.2 simulator runtime
-- [x] All 17 unit tests pass on iPhone 17 (4 Adventure, 7 domain, 6 persistence/store)
+- [x] All 19 unit tests pass on iPhone 17 (6 Adventure, 7 domain, 6 persistence/store)
 - [x] All 5 UI tests pass on iPhone 17, covering log/edit/undo, skipped/day completion, historical recovery, primary navigation, and Adventure World/Company/Records
 - [x] Adventure screenshots inspected on iPhone 17 in light and dark appearances
 - [x] Adventure UI test and screenshot inspection pass on the smallest installed simulator (iPhone 16e) in light mode
 - [x] Adventure UI test and screenshot inspection pass on iPhone 17 in dark mode at Accessibility XXXL
+- [x] Adventure supports renewable seeded expeditions, honest pre-choice odds, six trait ranks, graded runs, renown, and successor continuity without network or media assets
+- [x] Independent fantasy-game rubric evaluation scores Adventure 85/100 (81–84% predicted enthusiast approval; 82/100 certification bar)
 
 ## Live-service boundary
 

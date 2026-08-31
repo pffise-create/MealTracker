@@ -61,7 +61,7 @@ struct AdventureView: View {
             }
             .padding(AppSpacing.xl)
         }
-        .frame(minHeight: 238)
+        .frame(minHeight: 196)
         // This is a decorative summary whose complete value is exposed as one
         // accessibility label. Capping only this dense composition prevents it
         // from consuming several screens while the primary game copy still
@@ -145,11 +145,11 @@ struct AdventureView: View {
     private var worldView: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
             energyLedger
-            regionMap
             if let outcome = store.adventure.latestOutcome {
                 outcomeCard(outcome).accessibilityFocused($isOutcomeFocused)
             }
             encounterCard
+            regionMap
         }
     }
 
@@ -217,6 +217,7 @@ struct AdventureView: View {
 
     private func choiceButton(_ choice: AdventureChoiceID, isPrimary: Bool) -> some View {
         let canAfford = store.adventureEnergyBalance >= choice.energyCost
+        let forecast = AdventureEngine.forecast(for: choice, in: store.adventure)
         return Button { resolve(choice) } label: {
             HStack(alignment: .center, spacing: AppSpacing.md) {
                 VStack(alignment: .leading, spacing: 3) {
@@ -228,9 +229,14 @@ struct AdventureView: View {
                         .font(.appBody(.caption))
                         .foregroundStyle(isPrimary ? Color.white.opacity(0.78) : AppColors.muted)
                         .multilineTextAlignment(.leading)
+                    if let forecast {
+                        Text(forecast.summary)
+                            .font(.appBody(.caption2, weight: .bold))
+                            .foregroundStyle(isPrimary ? AdventurePalette.parchment : AppColors.brand)
+                    }
                 }
                 Spacer(minLength: AppSpacing.xs)
-                Text("−\(choice.energyCost)")
+                Text(choice.energyCost == 0 ? "FREE" : "−\(choice.energyCost)")
                     .font(.appDisplay(.title3, weight: .bold))
                     .foregroundStyle(isPrimary ? AdventurePalette.parchment : AppColors.brand)
                 LucideIcon(icon: .arrowRight, size: 18)
@@ -250,7 +256,10 @@ struct AdventureView: View {
             .opacity(canAfford ? 1 : 0.5)
         }
         .disabled(!canAfford)
-        .accessibilityLabel("\(choice.title), costs \(choice.energyCost) energy")
+        .accessibilityLabel(
+            "\(choice.title), \(choice.energyCost == 0 ? "free" : "costs \(choice.energyCost) energy")"
+            + (forecast.map { ", \($0.chancePercent) percent chance" } ?? "")
+        )
         .accessibilityHint(canAfford ? choice.approach : "More energy is earned by logging eating occasions")
         .accessibilityIdentifier("adventure.choice.\(choice.rawValue)")
     }
@@ -404,9 +413,36 @@ struct AdventureView: View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
             sectionHeading("Expedition record", detail: "Authoritative state—not generated narration")
             questLog
+            if let frontier = store.adventure.frontier { frontierRecord(frontier) }
             inventory
             legacyLedger
         }
+    }
+
+    private func frontierRecord(_ frontier: FrontierProgress) -> some View {
+        VStack(alignment: .leading, spacing: AppSpacing.md) {
+            HStack {
+                Text("FRONTIER MASTERY")
+                    .font(.appBody(.caption2, weight: .bold)).tracking(1.3).foregroundStyle(AppColors.muted)
+                Spacer()
+                Text("\(frontier.renown) RENOWN")
+                    .font(.appBody(.caption2, weight: .bold)).foregroundStyle(AppColors.brand)
+            }
+            ForEach(frontier.traits) { trait in
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(trait.id.name).font(.appBody(.headline, weight: .semibold)).foregroundStyle(AppColors.ink)
+                        Text(trait.id.detail).font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+                    }
+                    Spacer()
+                    Text("\(trait.rank)/2")
+                        .font(.appDisplay(.title3, weight: .bold)).foregroundStyle(AppColors.brand)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(AppSpacing.lg)
+        .appSurface()
     }
 
     private var questLog: some View {
@@ -692,7 +728,7 @@ private struct AdventureRegionMap: View {
                 }
             }
         }
-        .frame(height: 300)
+        .frame(height: 168)
         .background(AdventurePalette.deepInk)
         .clipShape(RoundedRectangle(cornerRadius: AppRadius.prominent, style: .continuous))
         .overlay {

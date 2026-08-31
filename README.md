@@ -108,7 +108,7 @@ Meal data remains local. Encrypted iCloud sync, export/delete tooling, and remin
 | Camera and photo selection | Native camera and Photos picker |
 | Text/photo nutrition analysis | OpenAI `gpt-4o-mini` through an optional private backend; explicit local demo fallback |
 | Restaurant menu lookup | Explicit no-reliable-menu provider and complete fallbacks |
-| Adventure | Persistent deterministic campaign with map, companions, quests, inventory, choices, dice, death, and one-use resurrection |
+| Adventure | Persistent deterministic campaign plus renewable three-encounter expeditions, visible odds, trait builds, companions, renown, death, resurrection, and successors |
 
 The OpenAI key is server-only; the app stores its separate backend access token in Keychain. See [ios/CONFIGURATION.md](ios/CONFIGURATION.md) for deployment and Xcode configuration.
 

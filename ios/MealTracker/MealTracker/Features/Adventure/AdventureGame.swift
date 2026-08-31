@@ -6,6 +6,8 @@ enum AdventureScene: String, Codable, Equatable, Sendable {
     case saltSpire
     case hollowCrown
     case homecoming
+    case frontier
+    case frontierReward
     case dead
 }
 
@@ -156,8 +158,74 @@ struct AdventureOutcome: Codable, Equatable, Sendable {
     var choiceID: AdventureChoiceID
 }
 
+enum AdventureTraitID: String, Codable, CaseIterable, Equatable, Identifiable, Sendable {
+    case ironWill
+    case wayfinder
+    case oathkeeper
+
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .ironWill: "Iron Will"
+        case .wayfinder: "Wayfinder"
+        case .oathkeeper: "Oathkeeper"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .ironWill: "+1 on bold approaches per rank"
+        case .wayfinder: "+1 on careful approaches per rank"
+        case .oathkeeper: "+1 with companions per rank"
+        }
+    }
+}
+
+struct AdventureTrait: Codable, Equatable, Identifiable, Sendable {
+    var id: AdventureTraitID
+    var rank: Int
+}
+
+struct FrontierProgress: Codable, Equatable, Sendable {
+    var expeditionNumber: Int
+    var step: Int
+    var seed: UInt64
+    var renown: Int
+    var runScore: Int
+    var traits: [AdventureTrait]
+
+    static let initial = FrontierProgress(
+        expeditionNumber: 1,
+        step: 0,
+        seed: 0xC0FFEE,
+        renown: 0,
+        runScore: 0,
+        traits: AdventureTraitID.allCases.map { AdventureTrait(id: $0, rank: 0) }
+    )
+
+    func rank(_ id: AdventureTraitID) -> Int {
+        traits.first(where: { $0.id == id })?.rank ?? 0
+    }
+
+    var grade: String {
+        switch runScore {
+        case 12...: "S"
+        case 9...: "A"
+        case 6...: "B"
+        default: "C"
+        }
+    }
+}
+
+struct AdventureChoiceForecast: Equatable, Sendable {
+    var chancePercent: Int
+    var modifier: Int
+    var target: Int
+
+    var summary: String { "\(chancePercent)% · d20 \(modifier >= 0 ? "+" : "")\(modifier) vs \(target)" }
+}
+
 struct AdventureState: Codable, Equatable, Sendable {
-    static let currentVersion = 1
+    static let currentVersion = 2
 
     var version: Int
     var hero: AdventureHero
@@ -171,6 +239,7 @@ struct AdventureState: Codable, Equatable, Sendable {
     var decisionsMade: Int
     var resurrectionUsed: Bool
     var latestOutcome: AdventureOutcome?
+    var frontier: FrontierProgress?
 
     static let initial = AdventureState(
         version: currentVersion,
@@ -205,7 +274,8 @@ struct AdventureState: Codable, Equatable, Sendable {
         energySpent: 0,
         decisionsMade: 0,
         resurrectionUsed: false,
-        latestOutcome: nil
+        latestOutcome: nil,
+        frontier: nil
     )
 
     func companion(_ id: AdventureCompanionID) -> AdventureCompanion? {
@@ -229,6 +299,17 @@ enum AdventureChoiceID: String, Codable, CaseIterable, Equatable, Identifiable, 
     case sealHollowCrown
     case claimHollowCrown
     case resurrectAtEmberRoad
+    case beginFrontierExpedition
+    case readTheTrail
+    case breakTheWard
+    case rallyCompany
+    case claimRelic
+    case guardCrossing
+    case chaseOmen
+    case trainIronWill
+    case trainWayfinder
+    case trainOathkeeper
+    case nameSuccessor
 
     var id: String { rawValue }
 
@@ -245,6 +326,17 @@ enum AdventureChoiceID: String, Codable, CaseIterable, Equatable, Identifiable, 
         case .sealHollowCrown: "Seal the court with both oaths"
         case .claimHollowCrown: "Take the crown for Emberwatch"
         case .resurrectAtEmberRoad: "Walk the Ember Road"
+        case .beginFrontierExpedition: "Chart the next expedition"
+        case .readTheTrail: "Read the hidden trail"
+        case .breakTheWard: "Break through the ward"
+        case .rallyCompany: "Rally the company"
+        case .claimRelic: "Reach for the relic"
+        case .guardCrossing: "Secure the crossing"
+        case .chaseOmen: "Chase the blue omen"
+        case .trainIronWill: "Temper Iron Will"
+        case .trainWayfinder: "Hone Wayfinder"
+        case .trainOathkeeper: "Deepen Oathkeeper"
+        case .nameSuccessor: "Name a successor"
         }
     }
 
@@ -261,17 +353,28 @@ enum AdventureChoiceID: String, Codable, CaseIterable, Equatable, Identifiable, 
         case .sealHollowCrown: "Company advantage · end the breach"
         case .claimHollowCrown: "Lethal risk · seize forbidden power"
         case .resurrectAtEmberRoad: "One use · consume the ember shard"
+        case .beginFrontierExpedition: "Renewable run · three encounters and a reward"
+        case .readTheTrail: "Careful · higher odds, stronger bonds"
+        case .breakTheWard: "Bold · lower cost, greater renown"
+        case .rallyCompany: "Careful · companions improve the roll"
+        case .claimRelic: "Bold · risk health for relics and renown"
+        case .guardCrossing: "Careful · protect the company"
+        case .chaseOmen: "Bold · pursue a high-grade finish"
+        case .trainIronWill: "Rank up bold approaches · cap 2"
+        case .trainWayfinder: "Rank up careful approaches · cap 2"
+        case .trainOathkeeper: "Rank up companion approaches · cap 2"
+        case .nameSuccessor: "Free · preserve the world, lose one bond rank"
         }
     }
 
     var energyCost: Int {
         switch self {
-        case .hireSable, .takeOldRoad: 2
-        case .trustSable, .crossFenAlone: 3
-        case .keepIlyra, .takeFenGlass: 2
-        case .turnStormKey, .forceSpireDoor: 4
-        case .sealHollowCrown, .claimHollowCrown: 4
+        case .hireSable, .trustSable, .keepIlyra, .turnStormKey, .sealHollowCrown: 3
+        case .takeOldRoad, .crossFenAlone, .takeFenGlass, .forceSpireDoor, .claimHollowCrown: 1
         case .resurrectAtEmberRoad: 6
+        case .readTheTrail, .rallyCompany, .guardCrossing: 3
+        case .breakTheWard, .claimRelic, .chaseOmen: 1
+        case .beginFrontierExpedition, .trainIronWill, .trainWayfinder, .trainOathkeeper, .nameSuccessor: 0
         }
     }
 }
@@ -345,7 +448,7 @@ enum AdventureEngine {
                     title: "The road remains on the map",
                     narration: "The Hollow Crown is sealed. Sable marks the safe miles in black ink; Ilyra leaves one blue lantern in the western window. The first expedition is complete.",
                     location: .hollowCrown,
-                    choices: []
+                    choices: [.beginFrontierExpedition]
                 )
             }
             return AdventureEncounter(
@@ -355,15 +458,47 @@ enum AdventureEngine {
                 location: .hollowCrown,
                 choices: [.sealHollowCrown, .claimHollowCrown]
             )
+        case .frontier:
+            let frontier = state.frontier ?? .initial
+            let shell = frontierShell(for: frontier)
+            return AdventureEncounter(
+                eyebrow: "EXPEDITION \(frontier.expeditionNumber) · \(frontier.step + 1) OF 3",
+                title: shell.title,
+                narration: shell.narration,
+                location: shell.location,
+                choices: shell.choices
+            )
+        case .frontierReward:
+            let frontier = state.frontier ?? .initial
+            return AdventureEncounter(
+                eyebrow: "EXPEDITION \(frontier.expeditionNumber) · GRADE \(frontier.grade)",
+                title: "Choose what the road taught you",
+                narration: "The company returns with \(frontier.runScore) marks of distinction. Take one lesson forward; a mastered trait converts future training into renown.",
+                location: .emberwatch,
+                choices: [.trainIronWill, .trainWayfinder, .trainOathkeeper]
+            )
         case .dead:
             return AdventureEncounter(
                 eyebrow: "THE EMBER ROAD",
                 title: "The map remembers your name",
                 narration: "Aren Vale is dead. The region, companions, inventory, and every road already opened remain. One ember shard can call the cartographer home—once.",
                 location: state.discoveredLocations.contains(.hollowCrown) ? .hollowCrown : .saltSpire,
-                choices: state.resurrectionUsed || !state.hasItem(.emberShard) ? [] : [.resurrectAtEmberRoad]
+                choices: state.resurrectionUsed || !state.hasItem(.emberShard)
+                    ? [.nameSuccessor]
+                    : [.resurrectAtEmberRoad, .nameSuccessor]
             )
         }
+    }
+
+    static func forecast(for choice: AdventureChoiceID, in state: AdventureState) -> AdventureChoiceForecast? {
+        guard let profile = rollProfile(for: choice, in: state) else { return nil }
+        let needed = profile.target - profile.modifier
+        let successfulFaces = min(20, max(0, 21 - needed))
+        return AdventureChoiceForecast(
+            chancePercent: successfulFaces * 5,
+            modifier: profile.modifier,
+            target: profile.target
+        )
     }
 
     static func resolve(
@@ -383,78 +518,95 @@ enum AdventureEngine {
 
         switch choice {
         case .hireSable:
-            let roll = AdventureRoll(die: 14, modifier: state.hero.resolve, target: 12)
-            recruit(.sable, bond: 1, in: &state)
+            let roll = makeRoll(for: choice, in: state)
+            if roll.succeeded {
+                recruit(.sable, bond: 1, in: &state)
+            } else {
+                state.hero.health = max(1, state.hero.health - 1)
+            }
             discover(.starfallFen, in: &state)
             completeQuest("trace-road", unlock: "light-fen", in: &state)
             state.scene = .starfallFen
             state.latestOutcome = outcome(
-                "Terms accepted",
-                "Sable finds the vanished road before the rain closes it. The pathfinder joins your company.",
+                roll.succeeded ? "Terms accepted" : "Terms refused",
+                roll.succeeded
+                    ? "Sable finds the vanished road before the rain closes it. The pathfinder joins your company."
+                    : "The negotiation fails. Aren reaches the fen alone, one health poorer and without a pathfinder.",
                 roll,
                 choice
             )
         case .takeOldRoad:
-            let roll = AdventureRoll(die: 7, modifier: state.hero.resolve, target: 12)
-            state.hero.health = max(1, state.hero.health - 2)
+            let roll = makeRoll(for: choice, in: state)
+            if !roll.succeeded { state.hero.health = max(1, state.hero.health - 2) }
             discover(.starfallFen, in: &state)
             completeQuest("trace-road", unlock: "light-fen", in: &state)
             state.scene = .starfallFen
             state.latestOutcome = outcome(
-                "The road takes its toll",
-                "You reach the fen without a guide, bloodied by shale and two hours behind the storm.",
+                roll.succeeded ? "The old road yields" : "The road takes its toll",
+                roll.succeeded
+                    ? "You find a forgotten cairn and reach the fen ahead of the storm."
+                    : "You reach the fen without a guide, bloodied by shale and two hours behind the storm.",
                 roll,
                 choice
             )
         case .trustSable:
-            let roll = AdventureRoll(die: 12, modifier: state.hero.resolve + 2, target: 13)
+            let roll = makeRoll(for: choice, in: state)
+            if !roll.succeeded { state.hero.health = max(1, state.hero.health - 1) }
             discover(.saltSpire, in: &state)
             state.scene = .saltSpire
             state.latestOutcome = outcome(
-                "The marked stones hold",
-                "Sable reads the water correctly. You reach Ilyra’s lantern with dry powder and an intact company.",
+                roll.succeeded ? "The marked stones hold" : "The fen changes course",
+                roll.succeeded
+                    ? "Sable reads the water correctly. You reach Ilyra’s lantern with dry powder and an intact company."
+                    : "One marker has sunk beneath the flood. The company reaches Ilyra, but the detour costs one health.",
                 roll,
                 choice
             )
         case .crossFenAlone:
-            let roll = AdventureRoll(die: 5, modifier: state.hero.resolve, target: 12)
-            state.hero.health = max(1, state.hero.health - 3)
+            let roll = makeRoll(for: choice, in: state)
+            if !roll.succeeded { state.hero.health = max(1, state.hero.health - 3) }
             addItem(.fenGlass, in: &state)
             discover(.saltSpire, in: &state)
             state.scene = .saltSpire
             state.latestOutcome = outcome(
-                "The causeway gives way",
-                "You escape the water with a cold phial in hand, but the thing below leaves a wound that will not warm.",
+                roll.succeeded ? "The direct line holds" : "The causeway gives way",
+                roll.succeeded
+                    ? "You cross before the black water rises and recover a cold phial from the final milepost."
+                    : "You escape the water with a cold phial in hand, but the thing below leaves a wound that will not warm.",
                 roll,
                 choice
             )
         case .keepIlyra:
-            let roll = AdventureRoll(die: 11, modifier: state.hero.resolve + 1, target: 11)
-            recruit(.ilyra, bond: 1, in: &state)
+            let roll = makeRoll(for: choice, in: state)
+            if roll.succeeded { recruit(.ilyra, bond: 1, in: &state) }
             addItem(.stormKey, in: &state)
             completeQuest("light-fen", unlock: "seal-court", in: &state)
             state.scene = .hollowCrown
             state.latestOutcome = outcome(
-                "A second oath joins yours",
-                "Ilyra enters the company and places the storm key in your palm. It beats like a quiet heart.",
+                roll.succeeded ? "A second oath joins yours" : "The physician remains",
+                roll.succeeded
+                    ? "Ilyra enters the company and places the storm key in your palm. It beats like a quiet heart."
+                    : "Ilyra gives you the storm key, but your appeal fails. She remains with the fen’s wounded.",
                 roll,
                 choice
             )
         case .takeFenGlass:
-            let roll = AdventureRoll(die: 10, modifier: state.hero.resolve, target: 11)
+            let roll = makeRoll(for: choice, in: state)
+            if !roll.succeeded { state.hero.health = max(1, state.hero.health - 1) }
             addItem(.fenGlass, in: &state)
             addItem(.stormKey, in: &state)
             completeQuest("light-fen", unlock: "seal-court", in: &state)
             state.scene = .hollowCrown
             state.latestOutcome = outcome(
-                "A colder bargain",
-                "Ilyra gives you the key but remains with the wounded. The Spire will be faced without her oath.",
+                roll.succeeded ? "A colder bargain" : "Glass draws blood",
+                roll.succeeded
+                    ? "Ilyra gives you the key and a clean phial. The Spire will be faced without her oath."
+                    : "The unstable phial burns one health from Aren’s hand. Ilyra remains with the wounded.",
                 roll,
                 choice
             )
         case .turnStormKey:
-            let companionBonus = state.companion(.ilyra)?.isRecruited == true ? 2 : 0
-            let roll = AdventureRoll(die: 13, modifier: state.hero.resolve + companionBonus, target: 15)
+            let roll = makeRoll(for: choice, in: state)
             discover(.hollowCrown, in: &state)
             state.scene = .homecoming
             state.latestOutcome = outcome(
@@ -467,17 +619,19 @@ enum AdventureEngine {
             )
             if !roll.succeeded { state.hero.health = max(1, state.hero.health - 2) }
         case .forceSpireDoor:
-            let roll = AdventureRoll(die: 3, modifier: state.hero.resolve, target: 17)
-            killHero(returningTo: .hollowCrown, in: &state)
+            let roll = makeRoll(for: choice, in: state)
+            discover(.hollowCrown, in: &state)
+            if roll.succeeded { state.scene = .homecoming } else { killHero(returningTo: .homecoming, in: &state) }
             state.latestOutcome = outcome(
-                "The storm oath collects its debt",
-                "The crownward door opens. Aren Vale does not cross its threshold alive.",
+                roll.succeeded ? "The ward shatters" : "The storm oath collects its debt",
+                roll.succeeded
+                    ? "The crownward door breaks and reveals a cache the oathkeepers abandoned."
+                    : "The crownward door opens. Aren Vale does not cross its threshold alive.",
                 roll,
                 choice
             )
         case .sealHollowCrown:
-            let companyBonus = state.companions.filter(\.isRecruited).count * 2
-            let roll = AdventureRoll(die: 14, modifier: state.hero.resolve + companyBonus, target: 16)
+            let roll = makeRoll(for: choice, in: state)
             if roll.succeeded {
                 addItem(.crownSeal, in: &state)
                 completeQuest("seal-court", unlock: nil, in: &state)
@@ -498,11 +652,20 @@ enum AdventureEngine {
                 )
             }
         case .claimHollowCrown:
-            let roll = AdventureRoll(die: 4, modifier: state.hero.resolve, target: 18)
-            killHero(returningTo: .homecoming, in: &state)
+            let roll = makeRoll(for: choice, in: state)
+            if roll.succeeded {
+                addItem(.crownSeal, in: &state)
+                completeQuest("seal-court", unlock: nil, in: &state)
+                state.hero.title = "Bearer of the Hollow Seal"
+                state.scene = .homecoming
+            } else {
+                killHero(returningTo: .homecoming, in: &state)
+            }
             state.latestOutcome = outcome(
-                "No living sovereign",
-                "The Crown accepts the claim and rejects the claimant. Aren’s map falls open at the road home.",
+                roll.succeeded ? "The Crown yields" : "No living sovereign",
+                roll.succeeded
+                    ? "Aren survives the forbidden claim and carries its seal back to Emberwatch."
+                    : "The Crown accepts the claim and rejects the claimant. Aren’s map falls open at the road home.",
                 roll,
                 choice
             )
@@ -522,9 +685,224 @@ enum AdventureEngine {
                 nil,
                 choice
             )
+        case .beginFrontierExpedition:
+            state.frontier = state.frontier ?? .initial
+            state.scene = .frontier
+            state.latestOutcome = outcome(
+                "A new map opens",
+                "Three dangers lie between Emberwatch and the blue horizon. The route changes with every expedition.",
+                nil,
+                choice
+            )
+        case .readTheTrail, .breakTheWard, .rallyCompany, .claimRelic, .guardCrossing, .chaseOmen:
+            resolveFrontier(choice, in: &state)
+        case .trainIronWill:
+            finishExpedition(training: .ironWill, in: &state)
+        case .trainWayfinder:
+            finishExpedition(training: .wayfinder, in: &state)
+        case .trainOathkeeper:
+            finishExpedition(training: .oathkeeper, in: &state)
+        case .nameSuccessor:
+            let names = ["Mara Vale", "Tarin Ash", "Neris Vey", "Edda Morn"]
+            state.hero.name = names[state.hero.deaths % names.count]
+            state.hero.title = "Heir to the Ember Map"
+            state.hero.isAlive = true
+            state.hero.health = state.hero.maximumHealth
+            state.companions = state.companions.map {
+                var companion = $0
+                companion.bond = max(0, companion.bond - 1)
+                return companion
+            }
+            state.scene = state.returnSceneAfterDeath ?? (state.frontier == nil ? .hollowCrown : .frontier)
+            state.returnSceneAfterDeath = nil
+            state.latestOutcome = outcome(
+                "The map changes hands",
+                "A successor takes up every opened road and hard-won relic. The company mourns, then marches on.",
+                nil,
+                choice
+            )
         }
 
         return state
+    }
+
+    private struct FrontierShell {
+        var title: String
+        var narration: String
+        var location: AdventureLocationID
+        var choices: [AdventureChoiceID]
+        var target: Int
+    }
+
+    private static let frontierShells: [FrontierShell] = [
+        FrontierShell(
+            title: "The glasswood moves at dusk",
+            narration: "Silver trunks close around an unmarked trail. The safe path is slow; a humming ward offers a violent shortcut.",
+            location: .ridgeGate,
+            choices: [.readTheTrail, .breakTheWard],
+            target: 12
+        ),
+        FrontierShell(
+            title: "A bell beneath the fen",
+            narration: "Each toll lifts a drowned bridge for one breath. The company can keep time—or dive for the relic sounding it.",
+            location: .starfallFen,
+            choices: [.rallyCompany, .claimRelic],
+            target: 13
+        ),
+        FrontierShell(
+            title: "The ash caravan is cornered",
+            narration: "Pilgrims hold a narrow crossing against shapes made of rain. Guard their retreat, or chase the blue omen leading the attack.",
+            location: .saltSpire,
+            choices: [.guardCrossing, .chaseOmen],
+            target: 14
+        ),
+        FrontierShell(
+            title: "Runes wake on the salt road",
+            narration: "A forgotten boundary burns underfoot. Its pattern can be solved carefully—or broken before the storm arrives.",
+            location: .saltSpire,
+            choices: [.readTheTrail, .breakTheWard],
+            target: 14
+        ),
+        FrontierShell(
+            title: "The lantern beast kneels",
+            narration: "A wounded creature shields a relic in its antlers. The company can calm it, or seize the prize before it rises.",
+            location: .starfallFen,
+            choices: [.rallyCompany, .claimRelic],
+            target: 12
+        ),
+        FrontierShell(
+            title: "Blue fire crosses the Crown",
+            narration: "The breach flickers open for a final moment. Hold the road for those behind you, or follow the omen through.",
+            location: .hollowCrown,
+            choices: [.guardCrossing, .chaseOmen],
+            target: 15
+        )
+    ]
+
+    private static func frontierShell(for frontier: FrontierProgress) -> FrontierShell {
+        let mixed = frontier.seed &+ UInt64(frontier.step * 17) &+ UInt64(frontier.expeditionNumber * 31)
+        return frontierShells[Int(mixed % UInt64(frontierShells.count))]
+    }
+
+    private static func rollProfile(for choice: AdventureChoiceID, in state: AdventureState) -> (modifier: Int, target: Int)? {
+        let resolve = state.hero.resolve
+        let recruited = state.companions.filter(\.isRecruited).count
+        let companionBond = state.companions.filter(\.isRecruited).map(\.bond).max() ?? 0
+        let frontier = state.frontier ?? .initial
+        let careful = frontier.rank(.wayfinder)
+        let bold = frontier.rank(.ironWill)
+        let company = recruited > 0 ? frontier.rank(.oathkeeper) : 0
+
+        switch choice {
+        case .hireSable: return (resolve, 11)
+        case .takeOldRoad: return (resolve, 14)
+        case .trustSable: return (resolve + 2 + companionBond, 13)
+        case .crossFenAlone: return (resolve, 15)
+        case .keepIlyra: return (resolve + 1, 11)
+        case .takeFenGlass: return (resolve, 14)
+        case .turnStormKey: return (resolve + (state.companion(.ilyra)?.isRecruited == true ? 2 : 0), 14)
+        case .forceSpireDoor: return (resolve + bold, 17)
+        case .sealHollowCrown: return (resolve + recruited * 2 + company, 15)
+        case .claimHollowCrown: return (resolve + bold, 18)
+        case .readTheTrail, .guardCrossing:
+            return (resolve + careful + company + companionBond, frontierShell(for: frontier).target)
+        case .rallyCompany:
+            return (resolve + careful + company + recruited + companionBond, frontierShell(for: frontier).target)
+        case .breakTheWard, .claimRelic, .chaseOmen:
+            return (resolve + bold + (state.hasItem(.fenGlass) ? 1 : 0), frontierShell(for: frontier).target + 3)
+        case .resurrectAtEmberRoad, .beginFrontierExpedition, .trainIronWill, .trainWayfinder,
+             .trainOathkeeper, .nameSuccessor:
+            return nil
+        }
+    }
+
+    private static func makeRoll(for choice: AdventureChoiceID, in state: AdventureState) -> AdventureRoll {
+        let profile = rollProfile(for: choice, in: state) ?? (0, 20)
+        var value = (state.frontier?.seed ?? 0xA11CE) ^ UInt64(state.decisionsMade &* 1_103_515_245)
+        for byte in choice.rawValue.utf8 {
+            value = value &* 1_099_511_628_211 ^ UInt64(byte)
+        }
+        value ^= value >> 33
+        value = value &* 0xff51afd7ed558ccd
+        value ^= value >> 33
+        let die = Int(value % 20) + 1
+        return AdventureRoll(die: die, modifier: profile.modifier, target: profile.target)
+    }
+
+    private static func resolveFrontier(_ choice: AdventureChoiceID, in state: inout AdventureState) {
+        var frontier = state.frontier ?? .initial
+        let encounter = frontierShell(for: frontier)
+        let roll = makeRoll(for: choice, in: state)
+        let isCareful = [.readTheTrail, .rallyCompany, .guardCrossing].contains(choice)
+        let successScore = isCareful ? 3 : 5
+
+        if roll.succeeded {
+            frontier.runScore += successScore
+            frontier.renown += isCareful ? 1 : 2
+            if isCareful {
+                strengthenBestCompanion(in: &state)
+            } else if choice == .claimRelic {
+                addItem(.fenGlass, in: &state)
+            }
+        } else {
+            frontier.runScore += isCareful ? 1 : 0
+            state.hero.health -= isCareful ? 1 : 3
+        }
+
+        frontier.step += 1
+        state.frontier = frontier
+        let nextScene: AdventureScene = frontier.step >= 3 ? .frontierReward : .frontier
+        if state.hero.health <= 0 {
+            killHero(returningTo: nextScene, in: &state)
+        } else {
+            state.scene = nextScene
+        }
+        state.latestOutcome = outcome(
+            roll.succeeded ? "The company prevails" : "The road collects a price",
+            roll.succeeded
+                ? "\(encounter.title) becomes another line on the living map. \(isCareful ? "Trust deepens." : "The risk earns greater renown.")"
+                : "The expedition continues, but the failure costs \(isCareful ? 1 : 3) health.",
+            roll,
+            choice
+        )
+    }
+
+    private static func finishExpedition(training traitID: AdventureTraitID, in state: inout AdventureState) {
+        var frontier = state.frontier ?? .initial
+        let oldGrade = frontier.grade
+        if let index = frontier.traits.firstIndex(where: { $0.id == traitID }), frontier.traits[index].rank < 2 {
+            frontier.traits[index].rank += 1
+        } else {
+            frontier.renown += 2
+        }
+        frontier.expeditionNumber += 1
+        frontier.step = 0
+        frontier.runScore = 0
+        frontier.seed = frontier.seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+        state.frontier = frontier
+        state.hero.health = min(state.hero.maximumHealth, state.hero.health + 2)
+        state.scene = .frontier
+        state.latestOutcome = outcome(
+            "Grade \(oldGrade) expedition recorded",
+            "\(traitID.name) advances. The company recovers 2 health and a new route appears.",
+            nil,
+            choiceForTrait(traitID)
+        )
+    }
+
+    private static func choiceForTrait(_ id: AdventureTraitID) -> AdventureChoiceID {
+        switch id {
+        case .ironWill: .trainIronWill
+        case .wayfinder: .trainWayfinder
+        case .oathkeeper: .trainOathkeeper
+        }
+    }
+
+    private static func strengthenBestCompanion(in state: inout AdventureState) {
+        guard let index = state.companions.indices
+            .filter({ state.companions[$0].isRecruited })
+            .min(by: { state.companions[$0].bond < state.companions[$1].bond }) else { return }
+        state.companions[index].bond = min(3, state.companions[index].bond + 1)
     }
 
     private static func outcome(
