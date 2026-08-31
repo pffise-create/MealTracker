@@ -17,12 +17,14 @@ enum MealAnalysisError: LocalizedError {
     case emptyInput
     case imageUnreadable
     case unavailable
+    case timedOut
 
     var errorDescription: String? {
         switch self {
         case .emptyInput: "Describe at least one food to continue."
         case .imageUnreadable: "That image could not be read. Try another photo or use text."
         case .unavailable: "Meal analysis is unavailable. Your input has not been logged."
+        case .timedOut: "The private AI server took too long to wake. Try again; the next request should be faster."
         }
     }
 }

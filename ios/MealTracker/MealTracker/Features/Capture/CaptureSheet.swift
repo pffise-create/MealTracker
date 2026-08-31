@@ -231,6 +231,12 @@ struct CaptureSheet: View {
             ProgressView().controlSize(.large).tint(AppColors.brand)
             Text(BackendMealAnalyzer() == nil ? "Preparing demo estimate…" : "Analyzing your meal…")
                 .font(.appBody(.headline, weight: .semibold))
+            if BackendMealAnalyzer() != nil {
+                Text("The private server may need up to a minute to wake after inactivity.")
+                    .font(.appBody(.caption))
+                    .foregroundStyle(AppColors.muted)
+                    .multilineTextAlignment(.center)
+            }
             disclosure
         }
         .frame(maxWidth: .infinity, minHeight: 220)

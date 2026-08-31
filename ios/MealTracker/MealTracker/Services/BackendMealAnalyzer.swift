@@ -74,10 +74,18 @@ struct BackendMealAnalyzer: MealTextAnalyzing, MealPhotoAnalyzing {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 30
+        // Render's free instances can spend roughly 50 seconds waking before
+        // OpenAI processing begins. Leave enough room for both phases.
+        request.timeoutInterval = 90
         request.httpBody = try JSONEncoder().encode(payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw MealAnalysisError.timedOut
+        }
         guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
             throw MealAnalysisError.unavailable
         }
