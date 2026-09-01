@@ -23,6 +23,7 @@ final class AppContainer {
             photoAnalyzer: analyzer,
             voiceTranscriber: LiveSpeechTranscriber(),
             venueResolver: LiveVenueResolver(),
+            menuService: BackendRestaurantMenuService() ?? DemoRestaurantMenuService(),
             healthKit: LiveHealthKitService()
         )
     }

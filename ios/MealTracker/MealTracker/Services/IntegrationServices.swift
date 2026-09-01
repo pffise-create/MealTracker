@@ -109,13 +109,20 @@ enum LocationAuthorizationState: Equatable, Sendable {
 struct RestaurantMenuItem: Identifiable, Equatable, Sendable {
     var id: String
     var name: String
+    var description: String
     var nutrition: NutritionFacts
     var sourceDescription: String
     var isOfficial: Bool
 }
 
+struct RestaurantMenuSource: Equatable, Sendable {
+    var title: String
+    var url: URL
+    var retrievedAt: String
+}
+
 enum RestaurantMenuResult: Equatable, Sendable {
-    case available(items: [RestaurantMenuItem], source: String)
+    case available(items: [RestaurantMenuItem], source: RestaurantMenuSource)
     case noReliableMenu
 }
 

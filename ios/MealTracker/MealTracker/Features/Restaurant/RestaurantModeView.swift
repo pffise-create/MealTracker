@@ -122,13 +122,27 @@ struct RestaurantModeView: View {
             case .noReliableMenu:
                 StatePanel(
                     icon: .info,
-                    title: "No reliable menu in this build",
-                    detail: "No menu is presented as live or official. Use capture now; a private menu provider can be connected later."
+                    title: "No official menu found",
+                    detail: "We couldn’t verify a menu on the restaurant’s own website. Use capture now or try the search again."
                 ) { Task { await store.searchMenu(for: venue) } }
                 .accessibilityIdentifier("restaurant.noMenu")
             case .available(let items, let source):
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(source).font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+                    Link(destination: source.url) {
+                        HStack(spacing: AppSpacing.xxs) {
+                            Text(source.title.isEmpty ? "Open official menu" : source.title)
+                            LucideIcon(icon: .arrowRight, size: 13)
+                        }
+                        .font(.appBody(.caption, weight: .semibold))
+                        .foregroundStyle(AppColors.brand)
+                    }
+                    .accessibilityHint("Opens the cited menu source")
+                    .accessibilityIdentifier("restaurant.menuSource")
+
+                    Text("Items come from the linked official menu. Nutrition is estimated unless the restaurant publishes it.")
+                        .font(.appBody(.caption2))
+                        .foregroundStyle(AppColors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                     ForEach(items) { item in
                         Button {
                             let option = IngredientOption(id: item.id, name: item.name, nutrition: item.nutrition)
@@ -146,7 +160,7 @@ struct RestaurantModeView: View {
                                 portions: [
                                     PortionOption(id: "menu-serving", label: "Menu serving", exactQuantity: nil, factor: 1)
                                 ],
-                                provenance: item.isOfficial ? .official : .database
+                                provenance: item.isOfficial ? .official : .aiEstimate
                             )
                             store.log(
                                 draft: draft,
@@ -156,8 +170,20 @@ struct RestaurantModeView: View {
                             )
                             dismiss()
                         } label: {
-                            HStack {
-                                Text(item.name).font(.appBody(.headline))
+                            HStack(alignment: .top, spacing: AppSpacing.sm) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.name).font(.appBody(.headline, weight: .bold))
+                                    if !item.description.isEmpty {
+                                        Text(item.description)
+                                            .font(.appBody(.caption))
+                                            .foregroundStyle(AppColors.muted)
+                                            .lineLimit(3)
+                                    }
+                                    Text(menuNutrition(item))
+                                        .font(.appBody(.caption, weight: .semibold))
+                                        .foregroundStyle(AppColors.ink)
+                                }
+                                .multilineTextAlignment(.leading)
                                 Spacer()
                                 LucideIcon(icon: .plus, size: 18).foregroundStyle(AppColors.brand)
                             }
@@ -170,6 +196,12 @@ struct RestaurantModeView: View {
                 }
             }
         }
+    }
+
+    private func menuNutrition(_ item: RestaurantMenuItem) -> String {
+        let calories = Int((item.nutrition.calories ?? 0).rounded())
+        let protein = Int((item.nutrition.protein ?? 0).rounded())
+        return "\(calories) kcal • \(protein)g protein\(item.isOfficial ? "" : " estimate")"
     }
 
     private func previousOrders(venue: VenueCandidate) -> some View {

@@ -14,6 +14,13 @@ type AnalysisRequest = {
   mimeType?: unknown;
 };
 
+type RestaurantMenuRequest = {
+  name?: unknown;
+  subtitle?: unknown;
+  latitude?: unknown;
+  longitude?: unknown;
+};
+
 const nutritionSchema = {
   type: "object",
   additionalProperties: false,
@@ -66,6 +73,62 @@ const mealAnalysisValidator = z.object({
 }).strict();
 
 type ValidatedMealAnalysis = z.infer<typeof mealAnalysisValidator>;
+
+const restaurantMenuSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["found", "venueName", "sourceTitle", "sourceURL", "items"],
+  properties: {
+    found: { type: "boolean" },
+    venueName: { type: "string" },
+    sourceTitle: { type: "string" },
+    sourceURL: { type: "string" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "description", "calories", "protein", "fat", "carbohydrates", "nutritionSource"],
+        properties: {
+          name: { type: "string" },
+          description: { type: "string" },
+          calories: { type: "number" },
+          protein: { type: "number" },
+          fat: { type: "number" },
+          carbohydrates: { type: "number" },
+          nutritionSource: { type: "string", enum: ["official", "estimated"] },
+        },
+      },
+    },
+  },
+};
+
+const restaurantMenuValidator = z.object({
+  found: z.boolean(),
+  venueName: z.string().trim().max(160),
+  sourceTitle: z.string().trim().max(200),
+  sourceURL: z.string().trim().max(2_000),
+  items: z.array(z.object({
+    name: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(500),
+    calories: z.number().finite().min(0).max(10_000),
+    protein: z.number().finite().min(0).max(1_000),
+    fat: z.number().finite().min(0).max(1_000),
+    carbohydrates: z.number().finite().min(0).max(1_000),
+    nutritionSource: z.enum(["official", "estimated"]),
+  }).strict()).max(40),
+}).strict().superRefine((menu, context) => {
+  if (!menu.found) return;
+  if (menu.items.length === 0) {
+    context.addIssue({ code: "custom", message: "A found menu must contain items", path: ["items"] });
+  }
+  try {
+    const url = new URL(menu.sourceURL);
+    if (url.protocol !== "https:") throw new Error("Source URL must use HTTPS");
+  } catch {
+    context.addIssue({ code: "custom", message: "A found menu must have a valid HTTPS source", path: ["sourceURL"] });
+  }
+});
 
 function normalizedEvidence(value: string) {
   return value.toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
@@ -174,6 +237,84 @@ async function startServer() {
     } catch (error) {
       console.error("Meal analysis request failed", error);
       res.status(502).json({ error: "Meal analysis is temporarily unavailable." });
+    }
+  });
+
+  app.post("/api/restaurant-menu", async (req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const backendToken = process.env.MEALTRACKER_BACKEND_TOKEN;
+    if (!apiKey || !backendToken) {
+      res.status(503).json({ error: "Restaurant menu search is not configured on this server." });
+      return;
+    }
+    if (req.get("Authorization") !== `Bearer ${backendToken}`) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+
+    const body = req.body as RestaurantMenuRequest;
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const subtitle = typeof body.subtitle === "string" ? body.subtitle.trim() : "";
+    const latitude = typeof body.latitude === "number" && Number.isFinite(body.latitude) ? body.latitude : undefined;
+    const longitude = typeof body.longitude === "number" && Number.isFinite(body.longitude) ? body.longitude : undefined;
+    if (!name) {
+      res.status(400).json({ error: "Provide a restaurant name." });
+      return;
+    }
+
+    const locationHint = [subtitle, latitude !== undefined && longitude !== undefined ? `${latitude}, ${longitude}` : ""]
+      .filter(Boolean)
+      .join("; ");
+    const instructions = `Search the live web for the official menu of the restaurant the user supplies. Prefer the restaurant's own website; do not use search result snippets, review sites, social media, delivery marketplaces, or menu aggregators as the source. Open the official menu page and extract only items actually listed there. Return found=false with empty source fields and items when no trustworthy official menu page is available. Return at most 40 representative food and drink items, preserving their menu names and concise descriptions. If the official page publishes nutrition, copy it and set nutritionSource=official. Otherwise estimate one menu serving's calories, protein, fat, and carbohydrates from the listed description and set nutritionSource=estimated. Never present estimated nutrition as official. sourceURL must be the exact official page opened, not a search URL or homepage when a more specific menu page exists.`;
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_MENU_MODEL || "gpt-5-mini",
+          tools: [{ type: "web_search" }],
+          input: [
+            { role: "developer", content: [{ type: "input_text", text: instructions }] },
+            {
+              role: "user",
+              content: [{
+                type: "input_text",
+                text: `Restaurant: ${name}\nLocation hint: ${locationHint || "not supplied"}`,
+              }],
+            },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "restaurant_menu",
+              strict: true,
+              schema: restaurantMenuSchema,
+            },
+          },
+          max_output_tokens: 6_000,
+          store: false,
+        }),
+      });
+      if (!response.ok) {
+        console.error("OpenAI restaurant menu search failed", response.status, await response.text());
+        res.status(502).json({ error: "Restaurant menu search is temporarily unavailable." });
+        return;
+      }
+
+      const outputText = extractOutputText(await response.json());
+      if (!outputText) throw new Error("OpenAI returned no restaurant menu output");
+      const menu = restaurantMenuValidator.parse(JSON.parse(outputText));
+      res.json({
+        ...menu,
+        retrievedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Restaurant menu search failed", error);
+      res.status(502).json({ error: "Restaurant menu search is temporarily unavailable." });
     }
   });
 

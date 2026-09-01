@@ -1,10 +1,10 @@
 # Integration configuration
 
-Text and photo nutrition can use the included private-backend route. Without a configured HTTPS base URL, the app keeps the explicit local demo estimator. Restaurant menu lookup still returns a reliable unavailable state.
+Text, photo nutrition, and official restaurant-menu discovery use the included private-backend routes. Without a configured HTTPS base URL, the app keeps the explicit local demo estimator and restaurant menus return a reliable unavailable state.
 
 ## Private backend contract
 
-The iPhone client calls `POST /api/meal-analysis`, authenticated by a backend token stored in Keychain. The included Express route calls OpenAI’s Responses API with `gpt-4o-mini`, accepts text or image input, requests schema-constrained nutrition output, and disables response storage. The OpenAI API key stays on the backend.
+The iPhone client calls `POST /api/meal-analysis` and `POST /api/restaurant-menu`, authenticated by a backend token stored in Keychain. The included Express routes call OpenAI’s Responses API, request schema-constrained output, and disable response storage. Restaurant lookup uses hosted web search to locate and open an official menu page, returns a clickable source URL, and labels nutrition as estimated unless the restaurant publishes it. The OpenAI API key stays on the backend.
 
 Example non-secret development configuration shape:
 
