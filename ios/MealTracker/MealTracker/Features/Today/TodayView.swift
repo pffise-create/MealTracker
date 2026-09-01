@@ -5,6 +5,7 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedDraft: MealDraft?
     @State private var editingEntry: MealEntry?
+    @State private var inspectingEntry: MealEntry?
     @State private var showingCapture = false
     @State private var showingEndDay = false
     @State private var showingRestaurant = false
@@ -17,6 +18,10 @@ struct TodayView: View {
                 LazyVStack(spacing: AppSpacing.lg) {
                     DailyProgressCard(day: store.today)
                     MacroSnapshotCard(summary: store.today.nutrition, targets: store.settings.targets)
+                    TodayLogSection(
+                        day: store.today,
+                        onSelect: { inspectingEntry = $0 }
+                    )
                     HabitRail(streak: store.streak.current, resources: store.resourceBalance)
 
                     if let confirmation = store.recentConfirmation {
@@ -88,6 +93,11 @@ struct TodayView: View {
                 editingEntry = nil
             }
         }
+        .sheet(item: $inspectingEntry) { entry in
+            LoggedMealDetailSheet(entry: entry)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingCapture) {
             CaptureSheet()
                 .presentationDetents([.height(420), .large])
@@ -124,6 +134,147 @@ struct TodayView: View {
         case 12..<17: return "Good afternoon"
         default: return "Good evening"
         }
+    }
+}
+
+private struct TodayLogSection: View {
+    let day: DaySnapshot
+    let onSelect: (MealEntry) -> Void
+
+    private var entries: [MealEntry] {
+        day.entries.sorted { $0.consumedAt < $1.consumedAt }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TODAY'S LOG")
+                        .font(.appBody(.caption2, weight: .bold))
+                        .tracking(1.2)
+                        .foregroundStyle(AppColors.muted)
+                        .accessibilityIdentifier("today.log")
+                    Text(entries.isEmpty ? "Nothing logged yet" : entryCount)
+                        .font(.appBody(.caption))
+                        .foregroundStyle(AppColors.muted)
+                }
+                Spacer()
+                if !entries.isEmpty {
+                    Text("Tap for ingredients")
+                        .font(.appBody(.caption2, weight: .semibold))
+                        .foregroundStyle(AppColors.brand)
+                }
+            }
+
+            if entries.isEmpty {
+                HStack(spacing: AppSpacing.sm) {
+                    LucideIcon(icon: .utensils, size: 20)
+                        .foregroundStyle(AppColors.brand)
+                    Text("Your meals and their macro breakdowns will appear here.")
+                        .font(.appBody(.callout))
+                        .foregroundStyle(AppColors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(AppSpacing.md)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .appSurface()
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        Button { onSelect(entry) } label: {
+                            TodayLogRow(entry: entry)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Shows meal and ingredient nutrition details")
+                        .accessibilityIdentifier("today.entry.\(entry.id.uuidString)")
+
+                        if index < entries.count - 1 {
+                            Divider().padding(.leading, 48)
+                        }
+                    }
+                }
+                .appSurface()
+            }
+        }
+    }
+
+    private var entryCount: String {
+        "\(entries.count) \(entries.count == 1 ? "meal" : "meals") logged"
+    }
+}
+
+private struct TodayLogRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let entry: MealEntry
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    identity
+                    macroLine
+                }
+            } else {
+                HStack(spacing: AppSpacing.sm) {
+                    identity
+                    Spacer(minLength: AppSpacing.xs)
+                    macroLine
+                    LucideIcon(icon: .chevronRight, size: 17)
+                        .foregroundStyle(AppColors.brand)
+                }
+            }
+        }
+        .padding(.horizontal, AppSpacing.md)
+        .padding(.vertical, AppSpacing.sm)
+        .frame(minHeight: 68)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
+    }
+
+    private var identity: some View {
+        HStack(spacing: AppSpacing.sm) {
+            ZStack {
+                Circle().fill(AppColors.brandSoft)
+                Text(String(entry.category.title.prefix(1)))
+                    .font(.appBody(.caption, weight: .bold))
+                    .foregroundStyle(AppColors.brand)
+            }
+            .frame(width: 34, height: 34)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.name)
+                    .font(.appBody(.callout, weight: .bold))
+                    .foregroundStyle(AppColors.ink)
+                    .multilineTextAlignment(.leading)
+                Text("\(entry.category.title) • \(entry.consumedAt.formatted(date: .omitted, time: .shortened))")
+                    .font(.appBody(.caption2))
+                    .foregroundStyle(AppColors.muted)
+            }
+        }
+    }
+
+    private var macroLine: some View {
+        VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
+            Text(nutritionValue(entry.nutrition.calories, unit: "kcal"))
+                .font(.appBody(.callout, weight: .bold))
+                .foregroundStyle(AppColors.ink)
+            Text("P \(shortValue(entry.nutrition.protein)) • C \(shortValue(entry.nutrition.carbohydrates)) • F \(shortValue(entry.nutrition.fat))")
+                .font(.appBody(.caption2, weight: .medium))
+                .foregroundStyle(AppColors.muted)
+        }
+    }
+
+    private var accessibilitySummary: String {
+        "\(entry.name), \(entry.category.title), \(nutritionValue(entry.nutrition.calories, unit: "calories")), protein \(nutritionValue(entry.nutrition.protein, unit: "grams")), carbohydrates \(nutritionValue(entry.nutrition.carbohydrates, unit: "grams")), fat \(nutritionValue(entry.nutrition.fat, unit: "grams"))"
+    }
+
+    private func shortValue(_ value: Double?) -> String {
+        value.map { "\(Int($0.rounded()))g" } ?? "—"
+    }
+
+    private func nutritionValue(_ value: Double?, unit: String) -> String {
+        value.map { "\(Int($0.rounded())) \(unit)" } ?? "unknown"
     }
 }
 

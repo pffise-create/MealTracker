@@ -234,7 +234,7 @@ private struct DayDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let dayIdentifier: String
     @State private var selectedDraft: MealDraft?
-    @State private var editingEntry: MealEntry?
+    @State private var inspectingEntry: MealEntry?
 
     private var day: DaySnapshot {
         store.day(identifier: dayIdentifier) ?? DaySnapshot(
@@ -282,14 +282,10 @@ private struct DayDetailView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
-        .sheet(item: $editingEntry) { entry in
-            EntryEditorSheet(entry: entry) { updated in
-                store.updateEntry(updated)
-                editingEntry = nil
-            } onDelete: {
-                store.deleteEntry(entry)
-                editingEntry = nil
-            }
+        .sheet(item: $inspectingEntry) { entry in
+            LoggedMealDetailSheet(entry: entry)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -308,7 +304,7 @@ private struct DayDetailView: View {
             }
 
             ForEach(entries) { entry in
-                Button { editingEntry = entry } label: {
+                Button { inspectingEntry = entry } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.name).font(.appBody(.callout, weight: .semibold)).foregroundStyle(AppColors.ink)
@@ -316,12 +312,13 @@ private struct DayDetailView: View {
                                 .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
                         }
                         Spacer()
-                        LucideIcon(icon: .pencil, size: 17).foregroundStyle(AppColors.brand)
+                        LucideIcon(icon: .chevronRight, size: 17).foregroundStyle(AppColors.brand)
                     }
                     .padding(AppSpacing.sm)
                     .appSurface()
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint("Shows meal and ingredient nutrition details")
                 .accessibilityIdentifier("history.entry.\(entry.id.uuidString)")
             }
 

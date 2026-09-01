@@ -29,6 +29,28 @@ final class MealTrackerUITests: XCTestCase {
         app.buttons["meal.log"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["recent.confirmation"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["today.log"].exists)
+
+        let loggedMeal = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'today.entry.'")
+        ).firstMatch
+        XCTAssertTrue(loggedMeal.waitForExistence(timeout: 3))
+        XCTAssertTrue(loggedMeal.isHittable)
+        attachScreenshot(named: "Today dashboard meal log")
+        loggedMeal.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["loggedMeal.detail"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["loggedMeal.total"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["loggedMeal.ingredients"].exists)
+        XCTAssertGreaterThan(
+            app.descendants(matching: .any).matching(
+                NSPredicate(format: "identifier BEGINSWITH 'loggedMeal.ingredient.'")
+            ).count,
+            0
+        )
+        attachScreenshot(named: "Logged meal ingredient breakdown")
+        app.buttons["Done"].tap()
+
+        XCTAssertTrue(app.buttons["recent.edit"].isHittable)
         app.buttons["recent.edit"].tap()
         XCTAssertTrue(app.buttons["entry.save"].waitForExistence(timeout: 2))
         app.buttons["Cancel"].tap()
@@ -142,5 +164,12 @@ final class MealTrackerUITests: XCTestCase {
         ).count
 
         return (calories, protein, ingredientCount)
+    }
+
+    private func attachScreenshot(named name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 }
