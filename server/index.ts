@@ -25,10 +25,11 @@ const nutritionSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "quantity", "calories", "protein", "fat", "carbohydrates"],
+        required: ["name", "quantity", "evidence", "calories", "protein", "fat", "carbohydrates"],
         properties: {
           name: { type: "string" },
           quantity: { type: "string" },
+          evidence: { type: "string" },
           calories: { type: "number" },
           protein: { type: "number" },
           fat: { type: "number" },
@@ -50,6 +51,7 @@ const mealAnalysisValidator = z.object({
   items: z.array(z.object({
     name: z.string().trim().min(1).max(120),
     quantity: z.string().trim().min(1).max(80),
+    evidence: z.string().trim().min(1).max(120),
     calories: z.number().finite().min(0).max(10_000),
     protein: z.number().finite().min(0).max(1_000),
     fat: z.number().finite().min(0).max(1_000),
@@ -62,6 +64,19 @@ const mealAnalysisValidator = z.object({
   confidence: z.enum(["low", "medium", "high"]),
   assumptions: z.array(z.string().trim().min(1).max(180)).max(8),
 }).strict();
+
+type ValidatedMealAnalysis = z.infer<typeof mealAnalysisValidator>;
+
+function normalizedEvidence(value: string) {
+  return value.toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
+}
+
+function hasGroundedTextItems(analysis: ValidatedMealAnalysis, description: string) {
+  const source = normalizedEvidence(description);
+  const evidence = analysis.items.map((item) => normalizedEvidence(item.evidence));
+  return evidence.every((phrase) => source.includes(phrase))
+    && new Set(evidence).size === evidence.length;
+}
 
 function category(value: unknown) {
   return typeof value === "string" && ["breakfast", "lunch", "dinner", "snacks"].includes(value)
@@ -111,10 +126,8 @@ async function startServer() {
       return;
     }
 
-    const content: Array<Record<string, string>> = [{
-      type: "input_text",
-      text: `Estimate nutrition for this ${category(body.category)} meal. Identify each distinct food, infer a reasonable consumed quantity when none is stated, calculate item macros, and ensure the top-level totals equal the sum of the items. Use non-negative finite numbers. Keep assumptions short and material. Return an editable single-meal estimate, not medical advice.`,
-    }];
+    const instructions = `Estimate nutrition only for foods and drinks explicitly supplied by the user. The meal category (${category(body.category)}) is labeling metadata, never evidence of additional food. Do not complete a meal, add typical sides, recommend pairings, or invent foods that were not named or visible. You may infer a reasonable quantity or preparation only for an item that is actually present in the input. For every text-described item, set evidence to the shortest exact contiguous phrase from the meal description that supports that item; one evidence phrase may support only one item. For image-only items, set evidence to "visible in image". If the description is "a beer", return exactly one beer item. Name the result from the supplied items rather than using a generic category name. Calculate item macros and ensure the top-level totals equal their sum. Use non-negative finite numbers and keep assumptions short and material.`;
+    const content: Array<Record<string, string>> = [];
     if (text) content.push({ type: "input_text", text: `Meal description: ${text}` });
     if (imageBase64) content.push({ type: "input_image", image_url: `data:${mimeType};base64,${imageBase64}` });
 
@@ -127,7 +140,10 @@ async function startServer() {
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          input: [{ role: "user", content }],
+          input: [
+            { role: "developer", content: [{ type: "input_text", text: instructions }] },
+            { role: "user", content },
+          ],
           text: {
             format: {
               type: "json_schema",
@@ -150,6 +166,9 @@ async function startServer() {
       const outputText = extractOutputText(await response.json());
       if (!outputText) throw new Error("OpenAI returned no structured output");
       const analysis = mealAnalysisValidator.parse(JSON.parse(outputText));
+      if (text && !hasGroundedTextItems(analysis, text)) {
+        throw new Error("OpenAI returned meal items that were not grounded in the description");
+      }
       const confidence = analysis.confidence;
       res.json({ analysis, provenance: `AI estimate • ${confidence} confidence — review and edit if needed.` });
     } catch (error) {
