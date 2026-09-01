@@ -126,6 +126,34 @@ final class MealTrackerUITests: XCTestCase {
         XCTAssertGreaterThan(salmonDinner.protein - banana.protein, 20)
     }
 
+    func testLiveRestaurantFindsOfficialStoneWayMenu() throws {
+        guard ProcessInfo.processInfo.environment["MEALTRACKER_LIVE_MENU_TEST"] == "1" else {
+            throw XCTSkip("Set MEALTRACKER_LIVE_MENU_TEST=1 to exercise live official-menu search.")
+        }
+
+        app.terminate()
+        app.launchArguments = ["-uiTestingRestaurantStoneWay"]
+        XCUIDevice.shared.orientation = .portrait
+        app.launch()
+
+        let restaurant = app.buttons["today.restaurant"]
+        XCTAssertTrue(restaurant.waitForExistence(timeout: 8))
+        restaurant.tap()
+
+        let venue = app.buttons["restaurant.venue.stone-way-cafe-seattle"]
+        XCTAssertTrue(venue.waitForExistence(timeout: 4))
+        venue.tap()
+        app.buttons["restaurant.fullMenu"].tap()
+
+        XCTAssertTrue(
+            app.links["restaurant.menuSource"].waitForExistence(timeout: 90),
+            "The official Stone Way Cafe menu was not found"
+        )
+        XCTAssertTrue(app.staticTexts["Breakfast Sandwich"].exists)
+        XCTAssertTrue(app.staticTexts["Waffles"].exists)
+        attachScreenshot(named: "Stone Way Cafe official menu results")
+    }
+
     private func analyzeLiveMeal(_ description: String) throws -> (calories: Double, protein: Double, ingredientCount: Int) {
         XCUIDevice.shared.orientation = .portrait
         let capture = app.buttons["today.capture"]

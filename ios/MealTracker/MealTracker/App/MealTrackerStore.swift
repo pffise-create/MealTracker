@@ -88,6 +88,7 @@ final class MealTrackerStore: ObservableObject {
     func bootstrap() {
         refresh()
         seedUITestRecoveryDayIfNeeded()
+        seedUITestRestaurantIfNeeded()
     }
 
     func refreshForSignificantTimeChange() {
@@ -401,6 +402,20 @@ final class MealTrackerStore: ObservableObject {
         }
         log(draft: MealDraft(template: template), targetDayIdentifier: previousDay)
         recentConfirmation = nil
+    }
+
+    private func seedUITestRestaurantIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-uiTestingRestaurantStoneWay") else { return }
+        venueState = .loaded([
+            VenueCandidate(
+                id: "stone-way-cafe-seattle",
+                name: "Stone Way Cafe",
+                subtitle: "3525 Stone Way North, Seattle, WA 98103",
+                latitude: 47.6509,
+                longitude: -122.3422,
+                confidence: "Regression test venue"
+            )
+        ])
     }
 
     @discardableResult
