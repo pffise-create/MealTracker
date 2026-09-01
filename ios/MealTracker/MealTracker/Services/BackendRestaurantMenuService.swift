@@ -24,7 +24,9 @@ struct BackendRestaurantMenuService: RestaurantMenuSearching {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        request.timeoutInterval = 90
+        // A free Render instance can spend roughly 50 seconds waking, and an
+        // official-site web search can take another minute on a large menu.
+        request.timeoutInterval = 150
         request.httpBody = try JSONEncoder().encode(
             BackendRestaurantMenuRequest(
                 name: venue.name,

@@ -146,7 +146,7 @@ final class MealTrackerUITests: XCTestCase {
         app.buttons["restaurant.fullMenu"].tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["restaurant.menuSource"].waitForExistence(timeout: 90),
+            app.descendants(matching: .any)["restaurant.menuSource"].waitForExistence(timeout: 150),
             "The official Stone Way Cafe menu was not found"
         )
         XCTAssertTrue(app.staticTexts["Breakfast Sandwich"].exists)
