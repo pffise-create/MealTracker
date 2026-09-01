@@ -84,11 +84,16 @@ final class MealTrackerUITests: XCTestCase {
 
         app.terminate()
         app.launchArguments = []
+        XCUIDevice.shared.orientation = .portrait
         app.launch()
 
+        let beer = try analyzeLiveMeal("one 12 ounce IPA beer")
         let banana = try analyzeLiveMeal("one medium banana")
         let salmonDinner = try analyzeLiveMeal("6 ounces grilled salmon, one cup cooked white rice, and one cup steamed broccoli")
 
+        XCTAssertEqual(beer.ingredientCount, 1, "A beer-only description must not invent dinner foods")
+        XCTAssertTrue(80...350 ~= beer.calories, "A 12-ounce IPA should be approximately 80–350 calories")
+        XCTAssertTrue(0...5 ~= beer.protein, "A beer should contain little protein")
         XCTAssertTrue(70...150 ~= banana.calories, "A medium banana should be approximately 70–150 calories")
         XCTAssertTrue(0...3 ~= banana.protein, "A medium banana should contain little protein")
         XCTAssertTrue(500...950 ~= salmonDinner.calories, "The specified salmon dinner should be approximately 500–950 calories")
@@ -99,7 +104,8 @@ final class MealTrackerUITests: XCTestCase {
         XCTAssertGreaterThan(salmonDinner.protein - banana.protein, 20)
     }
 
-    private func analyzeLiveMeal(_ description: String) throws -> (calories: Double, protein: Double) {
+    private func analyzeLiveMeal(_ description: String) throws -> (calories: Double, protein: Double, ingredientCount: Int) {
+        XCUIDevice.shared.orientation = .portrait
         let capture = app.buttons["today.capture"]
         XCTAssertTrue(capture.waitForExistence(timeout: 8))
         capture.tap()
@@ -116,6 +122,11 @@ final class MealTrackerUITests: XCTestCase {
 
         let confirmation = app.descendants(matching: .any)["recent.confirmation"]
         XCTAssertTrue(confirmation.waitForExistence(timeout: 90), "Live meal analysis did not finish")
+        defer {
+            if app.navigationBars["Edit log"].exists { app.buttons["Cancel"].tap() }
+            if app.buttons["recent.undo"].waitForExistence(timeout: 3) { app.buttons["recent.undo"].tap() }
+        }
+        XCUIDevice.shared.orientation = .portrait
         app.buttons["recent.edit"].tap()
 
         let caloriesField = app.textFields["entry.nutrition.calories"]
@@ -126,9 +137,10 @@ final class MealTrackerUITests: XCTestCase {
             XCTFail("The AI result did not contain numeric nutrition")
             throw NSError(domain: "MealTrackerLiveAITest", code: 1)
         }
+        let ingredientCount = app.textFields.matching(
+            NSPredicate(format: "identifier BEGINSWITH 'entry.ingredient.'")
+        ).count
 
-        app.buttons["Cancel"].tap()
-        app.buttons["recent.undo"].tap()
-        return (calories, protein)
+        return (calories, protein, ingredientCount)
     }
 }

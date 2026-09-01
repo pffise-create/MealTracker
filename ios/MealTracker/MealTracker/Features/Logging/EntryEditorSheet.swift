@@ -34,6 +34,7 @@ struct EntryEditorSheet: View {
                 Section("Ingredients") {
                     ForEach($entry.ingredients) { $ingredient in
                         TextField("Ingredient", text: $ingredient.name)
+                            .accessibilityIdentifier("entry.ingredient.\(ingredient.id)")
                     }
                     .onDelete { offsets in entry.ingredients.remove(atOffsets: offsets) }
                 }
