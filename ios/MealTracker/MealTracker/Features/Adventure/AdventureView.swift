@@ -76,7 +76,7 @@ struct AdventureView: View {
         .accessibilityLabel(
             "\(store.adventure.hero.name), \(store.adventure.hero.isAlive ? "alive" : "dead"). "
             + "Health \(store.adventure.hero.health) of \(store.adventure.hero.maximumHealth). "
-            + "\(store.adventureEnergyBalance) energy ready."
+            + "\(store.adventureEnergyBalance) energy."
         )
     }
 
@@ -166,20 +166,20 @@ struct AdventureView: View {
     @ViewBuilder
     private var energyLedgerContent: some View {
         Label {
-            Text("\(store.adventureEnergyBalance) energy ready")
+            Text("\(store.adventureEnergyBalance) energy")
                 .font(.appBody(.headline, weight: .bold))
         } icon: {
             LucideIcon(icon: .gem, size: 20).foregroundStyle(AppColors.brand)
         }
         Spacer(minLength: 0)
-        Text("\(store.resourceBalance) earned · \(store.adventure.energySpent) spent")
+        Text("\(store.adventure.energySpent) spent")
             .font(.appBody(.caption, weight: .medium))
             .foregroundStyle(AppColors.muted)
     }
 
     private var regionMap: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            sectionHeading("The Blue Verge", detail: "A coast holding one last impossible road")
+            sectionHeading("Blue Verge")
             AdventureRegionMap(discovered: store.adventure.discoveredLocations, current: encounter.location)
         }
     }
@@ -322,9 +322,7 @@ struct AdventureView: View {
                 Text(store.adventure.hero.isAlive ? "Expedition complete" : "The road is closed")
                     .font(.appBody(.headline, weight: .bold)).foregroundStyle(AppColors.ink)
                 Text(
-                    store.adventure.hero.isAlive
-                        ? "The Blue Verge is quiet. Future chapters will begin from this preserved state."
-                        : "The world history remains in Records. No logging reward or permanent progress was removed."
+                    store.adventure.hero.isAlive ? "Your progress is saved." : "See Records for this expedition."
                 )
                 .font(.appBody(.subheadline)).foregroundStyle(AppColors.muted)
             }
@@ -336,7 +334,7 @@ struct AdventureView: View {
 
     private var companyView: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
-            sectionHeading("The company", detail: "People, wounds, and promises persist between sessions")
+            sectionHeading("Company")
             heroSheet
             VStack(alignment: .leading, spacing: AppSpacing.sm) {
                 Text("COMPANIONS")
@@ -356,7 +354,7 @@ struct AdventureView: View {
                     Text(store.adventure.hero.title)
                         .font(.appBody(.subheadline)).foregroundStyle(AppColors.muted)
                     if store.adventure.hero.deaths > 0 {
-                        Text("Returned once from the Ember Road")
+                        Text("Returned from Ember Road")
                             .font(.appBody(.caption, weight: .semibold)).foregroundStyle(AdventurePalette.rust)
                     }
                 }
@@ -411,7 +409,7 @@ struct AdventureView: View {
 
     private var recordsView: some View {
         VStack(alignment: .leading, spacing: AppSpacing.xl) {
-            sectionHeading("Expedition record", detail: "Authoritative state—not generated narration")
+            sectionHeading("Expedition record")
             questLog
             if let frontier = store.adventure.frontier { frontierRecord(frontier) }
             inventory
@@ -499,7 +497,7 @@ struct AdventureView: View {
             Text("INVENTORY")
                 .font(.appBody(.caption2, weight: .bold)).tracking(1.3).foregroundStyle(AppColors.muted)
             if store.adventure.inventory.isEmpty {
-                Text("No carried relics. Opened roads and quest history remain.")
+                Text("No relics yet.")
                     .font(.appBody(.subheadline)).foregroundStyle(AppColors.muted)
             } else {
                 ForEach(store.adventure.inventory) { item in
@@ -538,8 +536,6 @@ struct AdventureView: View {
                 HStack(spacing: AppSpacing.xl) { legacyMetrics }
                 VStack(alignment: .leading, spacing: AppSpacing.sm) { legacyMetrics }
             }
-            Text("Death never removes discovered locations, companions, inventory, quest history, or earned logging rewards.")
-                .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
         }
         .padding(AppSpacing.lg)
         .appSurface()
@@ -559,11 +555,8 @@ struct AdventureView: View {
         }
     }
 
-    private func sectionHeading(_ title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.appDisplay(.title2, weight: .bold)).foregroundStyle(AppColors.ink)
-            Text(detail).font(.appBody(.subheadline)).foregroundStyle(AppColors.muted)
-        }
+    private func sectionHeading(_ title: String) -> some View {
+        Text(title).font(.appDisplay(.title2, weight: .bold)).foregroundStyle(AppColors.ink)
     }
 
     private func resolve(_ choice: AdventureChoiceID) {

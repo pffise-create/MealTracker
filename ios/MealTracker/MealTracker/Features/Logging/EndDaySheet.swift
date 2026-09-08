@@ -18,12 +18,9 @@ struct EndDaySheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: AppSpacing.xl) {
                 VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Text(day.isComplete ? "Today is already complete" : "Resolve the remaining moments")
+                    Text(day.isComplete ? "Day complete" : "Finish day")
                         .font(.appDisplay(.title2, weight: .bold))
                         .foregroundStyle(AppColors.ink)
-                    Text("Selected moments will be marked Skipped / None. Leave any unselected to keep the day incomplete.")
-                        .font(.appBody(.subheadline))
-                        .foregroundStyle(AppColors.muted)
                 }
 
                 VStack(spacing: AppSpacing.xs) {
@@ -46,7 +43,7 @@ struct EndDaySheet: View {
                                 Text(category.title)
                                     .font(.appBody(.headline, weight: .semibold))
                                 Spacer()
-                                Text(categoriesToSkip.contains(category) ? "Skip / None" : resolution.accessibilityDescription)
+                                Text(categoriesToSkip.contains(category) ? "Skip" : resolution.accessibilityDescription)
                                     .font(.appBody(.caption))
                                     .foregroundStyle(AppColors.muted)
                             }

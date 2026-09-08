@@ -149,18 +149,13 @@ private struct TodayLogSection: View {
                         .foregroundStyle(AppColors.muted)
                 }
                 Spacer()
-                if !entries.isEmpty {
-                    Text("Tap for ingredients")
-                        .font(.appBody(.caption2, weight: .semibold))
-                        .foregroundStyle(AppColors.brand)
-                }
             }
 
             if entries.isEmpty {
                 HStack(spacing: AppSpacing.sm) {
                     LucideIcon(icon: .utensils, size: 20)
                         .foregroundStyle(AppColors.brand)
-                    Text("Your meals and their macro breakdowns will appear here.")
+                    Text("Meals appear here.")
                         .font(.appBody(.callout))
                         .foregroundStyle(AppColors.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -314,13 +309,9 @@ private struct DailyProgressCard: View {
                 .font(.appBody(.caption2, weight: .bold))
                 .tracking(1.2)
                 .foregroundStyle(AppColors.muted)
-            Text(day.isComplete ? "Today is fully resolved" : "\(day.resolvedCount) of 4 moments")
+            Text(day.isComplete ? "4 of 4 logged" : "\(day.resolvedCount) of 4 logged")
                 .font(.appDisplay(.title3, weight: .bold))
                 .foregroundStyle(AppColors.ink)
-            Text(day.isComplete ? "Complete through logging or an explicit none." : "Logging completeness—not macro perfection.")
-                .font(.appBody(.caption))
-                .foregroundStyle(AppColors.muted)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -352,7 +343,7 @@ private struct CompletenessRing: View {
             VStack(spacing: 1) {
                 Text("\(day.resolvedCount)/4")
                     .font(.appDisplay(.title3, weight: .bold))
-                Text("resolved")
+                Text("logged")
                     .font(.appBody(.caption2, weight: .medium))
                     .foregroundStyle(AppColors.muted)
             }
@@ -418,14 +409,14 @@ private struct MacroSnapshotCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             HStack {
-                Text("NEUTRAL SNAPSHOT")
+                Text("TODAY'S MACROS")
                     .font(.appBody(.caption2, weight: .bold))
                     .tracking(1.2)
                 Spacer()
                 if summary.containsEstimate || summary.containsUnknown {
                     HStack(spacing: AppSpacing.xxs) {
                         LucideIcon(icon: .info, size: 13)
-                        Text(summary.containsUnknown ? "Some values unknown" : "Includes estimates")
+                        Text(summary.containsUnknown ? "Unknown" : "Estimates")
                     }
                     .font(.appBody(.caption2))
                 }
@@ -498,15 +489,15 @@ private struct HabitRail: View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(spacing: 0) {
-                    railItem(icon: .flame, title: "Current streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
+                    railItem(icon: .flame, title: "Streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
                     Divider()
-                    railItem(icon: .gem, title: "Banked resources", value: "\(resources) energy")
+                    railItem(icon: .gem, title: "Energy", value: "\(resources)")
                 }
             } else {
                 HStack(spacing: 0) {
-                    railItem(icon: .flame, title: "Current streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
+                    railItem(icon: .flame, title: "Streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
                     Divider().padding(.vertical, AppSpacing.xs)
-                    railItem(icon: .gem, title: "Banked resources", value: "\(resources) energy")
+                    railItem(icon: .gem, title: "Energy", value: "\(resources)")
                 }
             }
         }
@@ -545,7 +536,7 @@ private struct RecentConfirmationCard: View {
                     Text("Logged \(confirmation.entry.name)")
                         .font(.appBody(.subheadline, weight: .bold))
                         .foregroundStyle(AppColors.ink)
-                    Text("+\(RewardEngine.mealAmount) energy • totals updated")
+                    Text("+\(RewardEngine.mealAmount) energy")
                         .font(.appBody(.caption))
                         .foregroundStyle(AppColors.muted)
                 }
@@ -580,15 +571,10 @@ private struct PredictionSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("NEXT MEAL")
-                        .font(.appBody(.caption2, weight: .bold))
-                        .tracking(1.2)
-                        .foregroundStyle(AppColors.muted)
-                    Text("You can log a likely meal in seconds.")
-                        .font(.appBody(.caption))
-                        .foregroundStyle(AppColors.muted)
-                }
+                Text("NEXT MEAL")
+                    .font(.appBody(.caption2, weight: .bold))
+                    .tracking(1.2)
+                    .foregroundStyle(AppColors.muted)
                 Spacer()
                 Button("Restaurant", action: onRestaurant)
                     .font(.appBody(.caption, weight: .semibold))
@@ -605,8 +591,6 @@ private struct PredictionSection: View {
                         Text("No suggestions yet")
                             .font(.appDisplay(.title3, weight: .bold))
                     }
-                } description: {
-                    Text("Use capture below. Logged meals—not searches—teach future suggestions.")
                 }
                 .frame(minHeight: 180)
             } else {
@@ -695,7 +679,7 @@ private struct SkipNextMealButton: View {
             } label: {
                 HStack {
                     LucideIcon(icon: .skipForward, size: 17)
-                    Text("Mark Skipped / None")
+                    Text("Skip a meal")
                     Spacer()
                     LucideIcon(icon: .chevronRight, size: 16)
                 }

@@ -5,7 +5,7 @@ enum HealthKitServiceError: LocalizedError {
     case unavailable
 
     var errorDescription: String? {
-        "Apple Health is not available on this device. Meal tracking works normally without it."
+        "Apple Health is unavailable on this device."
     }
 }
 

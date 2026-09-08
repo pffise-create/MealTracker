@@ -85,18 +85,13 @@ struct CaptureSheet: View {
     }
 
     private var intro: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("Log first. Correct if needed.")
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Log a meal")
                 .font(.appDisplay(.title2, weight: .bold))
                 .foregroundStyle(AppColors.ink)
-            Text(
-                BackendMealAnalyzer() == nil
-                    ? "Text and photo nutrition use a clearly labeled local demo estimator in this build. Voice transcription is native. No original food photo is saved."
-                    : "Text and photo nutrition use AI through your private backend. Results are estimates you can review and edit. No original food photo is saved."
-            )
-                .font(.appBody(.subheadline))
+            Text(BackendMealAnalyzer() == nil ? "Editable estimates" : "AI estimates are editable")
+                .font(.appBody(.caption))
                 .foregroundStyle(AppColors.muted)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -107,11 +102,11 @@ struct CaptureSheet: View {
                 : [GridItem(.flexible()), GridItem(.flexible())],
             spacing: AppSpacing.sm
         ) {
-            CaptureChoice(icon: .sparkles, title: "Type it", subtitle: "Describe one or more foods") { mode = .text }
-            CaptureChoice(icon: .mic, title: "Speak", subtitle: "Native speech transcription") { mode = .voice }
-            CaptureChoice(icon: .camera, title: "Take photo", subtitle: "Camera access only when tapped") { requestCamera() }
+            CaptureChoice(icon: .sparkles, title: "Type it", subtitle: "Describe food") { mode = .text }
+            CaptureChoice(icon: .mic, title: "Speak", subtitle: "Dictate food") { mode = .voice }
+            CaptureChoice(icon: .camera, title: "Take photo", subtitle: "Use camera") { requestCamera() }
             PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                CaptureChoiceLabel(icon: .image, title: "Choose photo", subtitle: "No full-library access needed")
+                CaptureChoiceLabel(icon: .image, title: "Choose photo", subtitle: "Pick an image")
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("capture.photoLibrary")
@@ -168,7 +163,6 @@ struct CaptureSheet: View {
                         .stroke(AppColors.border, lineWidth: 1)
                 }
                 .accessibilityIdentifier("capture.text")
-            disclosure
             localErrorText
             Button {
                 Task {
@@ -200,7 +194,7 @@ struct CaptureSheet: View {
             .frame(width: 78, height: 78)
             .frame(maxWidth: .infinity)
 
-            Text(transcript.isEmpty ? "Your editable transcript appears here." : transcript)
+            Text(transcript.isEmpty ? "Transcript" : transcript)
                 .font(.appBody())
                 .foregroundStyle(transcript.isEmpty ? AppColors.muted : AppColors.ink)
                 .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
@@ -221,12 +215,11 @@ struct CaptureSheet: View {
                     if await store.analyzeTextAndLog(transcript, category: category, method: .voice) { dismiss() }
                 }
             } label: {
-                Text("Estimate and log transcript")
+                Text("Estimate and log")
             }
             .buttonStyle(PrimaryActionButtonStyle())
             .disabled(transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isAnalyzing)
             .accessibilityIdentifier("capture.logVoice")
-            disclosure
         }
     }
 
@@ -235,28 +228,8 @@ struct CaptureSheet: View {
             ProgressView().controlSize(.large).tint(AppColors.brand)
             Text(BackendMealAnalyzer() == nil ? "Preparing demo estimate…" : "Analyzing your meal…")
                 .font(.appBody(.headline, weight: .semibold))
-            if BackendMealAnalyzer() != nil {
-                Text("The private server may need up to a minute to wake after inactivity.")
-                    .font(.appBody(.caption))
-                    .foregroundStyle(AppColors.muted)
-                    .multilineTextAlignment(.center)
-            }
-            disclosure
         }
         .frame(maxWidth: .infinity, minHeight: 220)
-    }
-
-    private var disclosure: some View {
-        HStack(alignment: .top, spacing: AppSpacing.xs) {
-            LucideIcon(icon: .info, size: 15)
-            Text(
-                BackendMealAnalyzer() == nil
-                    ? "Demo estimator: local sample rules, not live AI. The result logs optimistically with immediate Edit and Undo."
-                    : "AI estimate from your private backend. Review with Edit or remove it immediately with Undo."
-            )
-        }
-        .font(.appBody(.caption))
-        .foregroundStyle(AppColors.muted)
     }
 
     @ViewBuilder
@@ -276,7 +249,7 @@ struct CaptureSheet: View {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-                localError = "Camera is unavailable on this device. Choose a photo or use text."
+                localError = "Camera unavailable. Use a photo or text."
                 return
             }
             showingCamera = true
@@ -286,13 +259,13 @@ struct CaptureSheet: View {
                    UIImagePickerController.isSourceTypeAvailable(.camera) {
                     showingCamera = true
                 } else {
-                    localError = "Camera access is off or unavailable. Choose a photo or use text instead."
+                    localError = "Camera unavailable. Use a photo or text."
                 }
             }
         case .denied, .restricted:
-            localError = "Camera access is off. Choose a photo or use text instead."
+            localError = "Camera access is off. Use a photo or text."
         @unknown default:
-            localError = "Camera is unavailable. Choose a photo or use text instead."
+            localError = "Camera unavailable. Use a photo or text."
         }
     }
 

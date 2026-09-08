@@ -45,8 +45,6 @@ struct SettingsView: View {
             target("Protein", value: $settings.targets.protein, range: 40...300, step: 5, unit: "g")
             target("Fat", value: $settings.targets.fat, range: 20...200, step: 5, unit: "g")
             target("Carbohydrates", value: $settings.targets.carbohydrates, range: 40...500, step: 5, unit: "g")
-            Text("Targets are neutral reference points. They never determine day completion or streaks.")
-                .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
         }
         .padding(AppSpacing.md)
         .appSurface()
@@ -62,7 +60,7 @@ struct SettingsView: View {
                     .foregroundStyle(AppColors.muted)
             }
             .font(.appBody(.callout, weight: .semibold))
-            Text("Photo bytes exist only for the current analysis operation, then leave memory. This is a fixed privacy behavior in this milestone, not a cosmetic setting.")
+            Text("Analyzed, then discarded.")
                 .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
         }
         .padding(AppSpacing.md)
@@ -72,7 +70,7 @@ struct SettingsView: View {
     private var healthCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
             cardTitle("Apple Health", icon: .heartPulse)
-            Text("Read-only access is requested here—not at launch—for weight, workouts, steps, and active energy.")
+            Text("Read-only access")
                 .font(.appBody(.subheadline)).foregroundStyle(AppColors.muted)
             healthState
         }
@@ -96,34 +94,30 @@ struct SettingsView: View {
                 .font(.appBody(.callout, weight: .semibold)).foregroundStyle(AppColors.brand)
         case .loaded(let snapshot):
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text("Health request completed")
+                Text("Connected")
                     .font(.appBody(.callout, weight: .bold)).foregroundStyle(AppColors.ink)
                 Text(healthSummary(snapshot))
                     .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
-                Text("Apple does not reveal whether individual read types were denied; unavailable values remain private and do not affect meal tracking.")
-                    .font(.appBody(.caption2)).foregroundStyle(AppColors.muted)
             }
         }
     }
 
     private var integrationCard: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            cardTitle("Integration status", icon: .info)
-            statusRow("Text & photo nutrition", BackendMealAnalyzer() == nil ? "Demo estimator" : "OpenAI via private backend")
-            statusRow("Voice transcription", "Native Speech framework")
-            statusRow("Nearby venues", "Native Core Location + MapKit")
-            statusRow("Restaurant menus", "No provider configured")
-            statusRow("Adventure", "Persistent local campaign")
+            cardTitle("Connections", icon: .info)
+            statusRow("Nutrition", BackendMealAnalyzer() == nil ? "Demo" : "AI")
+            statusRow("Voice", "On device")
+            statusRow("Restaurants", "Official menus")
             if BackendMealAnalyzer() != nil {
                 SecureField("Backend access token", text: $backendToken)
                     .textContentType(.password)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .accessibilityLabel("Private backend access token")
-                Text("Stored only in this device’s Keychain. The OpenAI API key remains on the backend.")
+                Text("Saved in this iPhone’s Keychain.")
                     .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
             } else {
-                Text("Set MEALTRACKER_API_BASE_URL in Xcode to an HTTPS backend. No API credentials or secrets are included in the app bundle.")
+                Text("Add an HTTPS backend URL in Xcode.")
                     .font(.appBody(.caption)).foregroundStyle(AppColors.muted)
             }
         }

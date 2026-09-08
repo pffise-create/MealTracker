@@ -8,8 +8,8 @@ enum VenueResolutionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .permissionDenied: "Location access is off. You can still log by photo, voice, or text."
-        case .locationUnavailable: "A nearby venue could not be resolved. Fallback logging is still available."
+        case .permissionDenied: "Location access is off. Log another way."
+        case .locationUnavailable: "No nearby restaurant found. Log another way."
         }
     }
 }

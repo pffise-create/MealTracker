@@ -21,12 +21,6 @@ struct MealDetailSheet: View {
                         Text(draft.name)
                             .font(.appDisplay(.title, weight: .bold))
                             .foregroundStyle(AppColors.ink)
-                        Text(draft.provenance == .starter
-                             ? "Starter nutrition data. Your changes become the future default after logging."
-                             : "Preselected from your recent logged behavior.")
-                            .font(.appBody(.subheadline))
-                            .foregroundStyle(AppColors.muted)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     portionSection
@@ -107,7 +101,7 @@ struct MealDetailSheet: View {
 
     private var ingredientSection: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            sectionLabel("INGREDIENTS & SWAPS")
+            sectionLabel("INGREDIENTS")
             VStack(spacing: AppSpacing.xs) {
                 ForEach($draft.ingredients) { $slot in
                     IngredientRow(slot: $slot)
@@ -139,7 +133,7 @@ struct MealDetailSheet: View {
                     .buttonStyle(QuietActionButtonStyle())
                     .accessibilityIdentifier("ingredient.confirmAdd")
                 }
-                Text("Nutrition remains unknown until you edit the logged entry; it is not counted as zero silently.")
+                Text("Nutrition: unknown")
                     .font(.appBody(.caption2))
                     .foregroundStyle(AppColors.muted)
             } else {
@@ -194,11 +188,6 @@ private struct IngredientRow: View {
                 Text(selectedName)
                     .font(.appBody(.callout, weight: .semibold))
                     .foregroundStyle(slot.isIncluded ? AppColors.ink : AppColors.muted)
-                if slot.options.count > 1 {
-                    Text("Swap available")
-                        .font(.appBody(.caption2))
-                        .foregroundStyle(AppColors.muted)
-                }
             }
             Spacer()
             if slot.options.count > 1 {
@@ -242,7 +231,7 @@ struct NutritionEstimateCard: View {
                     .tracking(1.2)
                 Spacer()
                 if facts.containsUnknown {
-                    Text("Unknown values shown as —")
+                    Text("Unknown: —")
                         .font(.appBody(.caption2))
                 }
             }

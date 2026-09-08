@@ -179,10 +179,10 @@ struct DeterministicMealPredictionEngine: MealPredicting {
     }
 
     private func learnedReason(count: Int, recent: MealEntry?, now: Date) -> String {
-        guard let recent else { return "Logged before"
+        guard let recent else { return "Previous"
         }
         let days = Int(max(now.timeIntervalSince(recent.consumedAt) / 86_400, 0))
-        if days <= 2 { return "Recent choice • usual edits applied" }
-        return "Logged \(count) \(count == 1 ? "time" : "times")"
+        if days <= 2 { return "Recent" }
+        return "\(count) logs"
     }
 }

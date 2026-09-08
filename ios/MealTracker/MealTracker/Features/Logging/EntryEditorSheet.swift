@@ -46,7 +46,7 @@ struct EntryEditorSheet: View {
                 } header: {
                     Text("Nutrition")
                 } footer: {
-                    Text("Blank values remain unknown. Saving this correction increases its weight in future predictions.")
+                    Text("Blank values stay unknown.")
                 }
                 Section {
                     Button("Delete entry", role: .destructive) {

@@ -99,7 +99,7 @@ struct HistoryView: View {
                             Text(formatted(day.dayIdentifier))
                                 .font(.appBody(.headline, weight: .semibold))
                                 .foregroundStyle(AppColors.ink)
-                            Text(day.isComplete ? "All four moments resolved" : "\(day.resolvedCount) of 4 resolved")
+                            Text(day.isComplete ? "4 of 4 logged" : "\(day.resolvedCount) of 4 logged")
                                 .font(.appBody(.caption))
                                 .foregroundStyle(AppColors.muted)
                         }
@@ -251,14 +251,9 @@ private struct DayDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppSpacing.lg) {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                        Text(day.isComplete ? "Day complete" : "\(day.resolvedCount) of 4 resolved")
+                        Text(day.isComplete ? "4 of 4 logged" : "\(day.resolvedCount) of 4 logged")
                             .font(.appDisplay(.title2, weight: .bold))
                             .foregroundStyle(AppColors.ink)
-                        Text(day.isComplete
-                             ? "Historical edits recalculate streaks automatically. Earned adventure progress remains banked."
-                             : "Resolve the missing moments to recover any eligible streak chain.")
-                            .font(.appBody(.subheadline))
-                            .foregroundStyle(AppColors.muted)
                     }
 
                     ForEach(MealCategory.allCases) { category in
@@ -329,7 +324,7 @@ private struct DayDetailView: View {
                     }
                     .accessibilityIdentifier("history.skip.\(category.rawValue)")
                 } else if resolution == .skipped {
-                    Button("Restore unresolved") {
+                    Button("Restore") {
                         store.markSkipped(category, dayIdentifier: dayIdentifier, skipped: false)
                     }
                 }

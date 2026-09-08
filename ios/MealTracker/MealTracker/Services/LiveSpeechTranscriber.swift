@@ -8,8 +8,8 @@ enum SpeechTranscriptionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .permissionDenied: "Speech or microphone access is off. Text logging is still available."
-        case .unavailable: "Speech recognition is unavailable right now. Try text logging instead."
+        case .permissionDenied: "Speech or microphone access is off. Use text instead."
+        case .unavailable: "Speech recognition unavailable. Use text instead."
         }
     }
 }

@@ -32,10 +32,10 @@ struct RestaurantModeView: View {
                 LucideIcon(icon: .mapPin, size: 34).foregroundStyle(AppColors.brand)
             }
             .frame(width: 68, height: 68)
-            Text("Find the likely place, not a perfect menu.")
+            Text("Find a restaurant")
                 .font(.appDisplay(.title2, weight: .bold))
                 .foregroundStyle(AppColors.ink)
-            Text("MealTracker requests While Using the App location only. Nearby results may be approximate, and you always choose the venue.")
+            Text("Uses your current location.")
                 .font(.appBody(.subheadline))
                 .foregroundStyle(AppColors.muted)
         }
@@ -45,13 +45,13 @@ struct RestaurantModeView: View {
     private var venueContent: some View {
         switch store.venueState {
         case .idle:
-            Button("Detect nearby restaurants") {
+            Button("Find nearby") {
                 Task { await store.detectVenues() }
             }
             .buttonStyle(PrimaryActionButtonStyle())
             .accessibilityIdentifier("restaurant.detect")
         case .loading:
-            LoadingPanel(title: "Looking nearby", detail: "Using foreground location only")
+            LoadingPanel(title: "Finding nearby")
         case .failed(let message):
             StatePanel(icon: .mapPin, title: "Location isn’t available", detail: message) {
                 Task { await store.detectVenues() }
@@ -60,12 +60,12 @@ struct RestaurantModeView: View {
             if venues.isEmpty {
                 StatePanel(
                     icon: .search,
-                    title: "No nearby restaurant found",
-                    detail: "You can still log immediately with photo, voice, or text."
+                    title: "No restaurants found",
+                    detail: "Try again or log another way."
                 ) { Task { await store.detectVenues() } }
             } else {
                 VStack(alignment: .leading, spacing: AppSpacing.sm) {
-                    Text("CHOOSE A VENUE")
+                    Text("NEARBY")
                         .font(.appBody(.caption2, weight: .bold))
                         .tracking(1.2)
                         .foregroundStyle(AppColors.muted)
@@ -96,9 +96,6 @@ struct RestaurantModeView: View {
                         }
                         .buttonStyle(QuietActionButtonStyle())
                         .accessibilityIdentifier("restaurant.fullMenu")
-                        Text("Not the right place? Choose another venue above.")
-                            .font(.appBody(.caption))
-                            .foregroundStyle(AppColors.muted)
                         menuContent(venue: selectedVenue)
                     }
                 }
@@ -112,7 +109,7 @@ struct RestaurantModeView: View {
         case .idle:
             EmptyView()
         case .loading:
-            LoadingPanel(title: "Checking reliable sources", detail: "Fallback logging stays available")
+            LoadingPanel(title: "Finding menu")
         case .failed(let message):
             StatePanel(icon: .wifiOff, title: "Menu search paused", detail: message) {
                 Task { await store.searchMenu(for: venue) }
@@ -123,7 +120,7 @@ struct RestaurantModeView: View {
                 StatePanel(
                     icon: .info,
                     title: "No official menu found",
-                    detail: "We couldn’t verify a menu on the restaurant’s own website. Use capture now or try the search again."
+                    detail: "Try again or log another way."
                 ) { Task { await store.searchMenu(for: venue) } }
                 .accessibilityIdentifier("restaurant.noMenu")
             case .available(let items, let source):
@@ -139,7 +136,7 @@ struct RestaurantModeView: View {
                     .accessibilityHint("Opens the cited menu source")
                     .accessibilityIdentifier("restaurant.menuSource")
 
-                    Text("Items come from the linked official menu. Nutrition is estimated unless the restaurant publishes it.")
+                    Text("Official menu · estimates marked")
                         .font(.appBody(.caption2))
                         .foregroundStyle(AppColors.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -207,12 +204,12 @@ struct RestaurantModeView: View {
     private func previousOrders(venue: VenueCandidate) -> some View {
         let entries = store.previousOrders(venueID: venue.id)
         return VStack(alignment: .leading, spacing: AppSpacing.xs) {
-            Text("LIKELY / PREVIOUS ORDERS")
+            Text("PREVIOUS ORDERS")
                 .font(.appBody(.caption2, weight: .bold))
                 .tracking(1.2)
                 .foregroundStyle(AppColors.muted)
             if entries.isEmpty {
-                Text("No logged orders at this venue yet.")
+                Text("No orders yet.")
                     .font(.appBody(.subheadline))
                     .foregroundStyle(AppColors.muted)
                     .padding(AppSpacing.md)
@@ -244,7 +241,7 @@ struct RestaurantModeView: View {
     private var fallback: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
             Divider()
-            Text("LOG WITHOUT A MENU")
+            Text("NO MENU?")
                 .font(.appBody(.caption2, weight: .bold))
                 .tracking(1.2)
                 .foregroundStyle(AppColors.muted)
@@ -253,7 +250,7 @@ struct RestaurantModeView: View {
             } label: {
                 HStack {
                     LucideIcon(icon: .sparkles, size: 18)
-                    Text("Use photo, voice, or text")
+                    Text("Log another way")
                 }
             }
             .buttonStyle(QuietActionButtonStyle())
@@ -264,14 +261,21 @@ struct RestaurantModeView: View {
 
 private struct LoadingPanel: View {
     let title: String
-    let detail: String
+    let detail: String?
+
+    init(title: String, detail: String? = nil) {
+        self.title = title
+        self.detail = detail
+    }
 
     var body: some View {
         HStack(spacing: AppSpacing.md) {
             ProgressView().tint(AppColors.brand)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.appBody(.headline, weight: .bold))
-                Text(detail).font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+                if let detail, !detail.isEmpty {
+                    Text(detail).font(.appBody(.caption)).foregroundStyle(AppColors.muted)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

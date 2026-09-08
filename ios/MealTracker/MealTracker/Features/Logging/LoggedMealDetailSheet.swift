@@ -99,16 +99,11 @@ struct LoggedMealDetailSheet: View {
 
     private var ingredientBreakdown: some View {
         VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            VStack(alignment: .leading, spacing: 3) {
-                sectionLabel("INGREDIENT BREAKDOWN")
-                    .accessibilityIdentifier("loggedMeal.ingredients")
-                Text("Each item’s contribution to the meal total.")
-                    .font(.appBody(.caption))
-                    .foregroundStyle(AppColors.muted)
-            }
+            sectionLabel("INGREDIENTS")
+                .accessibilityIdentifier("loggedMeal.ingredients")
 
             if entry.ingredients.isEmpty {
-                Text("No ingredient breakdown was captured for this meal.")
+                Text("No ingredients recorded.")
                     .font(.appBody(.callout))
                     .foregroundStyle(AppColors.muted)
                     .padding(AppSpacing.md)
@@ -127,7 +122,7 @@ struct LoggedMealDetailSheet: View {
             }
 
             if entry.correctionCount > 0 {
-                Text("The meal total was edited after logging, so it may differ from the original ingredient estimates.")
+                Text("Ingredient estimates are unchanged.")
                     .font(.appBody(.caption2))
                     .foregroundStyle(AppColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
