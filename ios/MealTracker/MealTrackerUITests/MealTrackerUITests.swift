@@ -48,12 +48,14 @@ final class MealTrackerUITests: XCTestCase {
             0
         )
         attachScreenshot(named: "Logged meal ingredient breakdown")
+        let correctionInput = app.textFields["loggedMeal.correctionInput"]
+        XCTAssertTrue(correctionInput.waitForExistence(timeout: 2))
+        correctionInput.tap()
+        correctionInput.typeText("Actually, this was 120 calories")
+        app.buttons["loggedMeal.applyCorrection"].tap()
+        XCTAssertTrue(app.staticTexts["120 kcal"].waitForExistence(timeout: 2))
         app.buttons["Done"].tap()
 
-        XCTAssertTrue(app.buttons["recent.edit"].isHittable)
-        app.buttons["recent.edit"].tap()
-        XCTAssertTrue(app.buttons["entry.save"].waitForExistence(timeout: 2))
-        app.buttons["Cancel"].tap()
         app.buttons["recent.undo"].tap()
         XCTAssertFalse(app.descendants(matching: .any)["recent.confirmation"].waitForExistence(timeout: 1))
     }
@@ -173,22 +175,22 @@ final class MealTrackerUITests: XCTestCase {
         let confirmation = app.descendants(matching: .any)["recent.confirmation"]
         XCTAssertTrue(confirmation.waitForExistence(timeout: 90), "Live meal analysis did not finish")
         defer {
-            if app.navigationBars["Edit log"].exists { app.buttons["Cancel"].tap() }
+            if app.buttons["Done"].exists { app.buttons["Done"].tap() }
             if app.buttons["recent.undo"].waitForExistence(timeout: 3) { app.buttons["recent.undo"].tap() }
         }
         XCUIDevice.shared.orientation = .portrait
-        app.buttons["recent.edit"].tap()
+        app.buttons["recent.correct"].tap()
 
-        let caloriesField = app.textFields["entry.nutrition.calories"]
-        let proteinField = app.textFields["entry.nutrition.protein"]
-        XCTAssertTrue(caloriesField.waitForExistence(timeout: 4))
-        guard let calories = Double(caloriesField.value as? String ?? ""),
-              let protein = Double(proteinField.value as? String ?? "") else {
+        let caloriesMetric = app.descendants(matching: .any)["loggedMeal.metric.calories"]
+        let proteinMetric = app.descendants(matching: .any)["loggedMeal.metric.protein"]
+        XCTAssertTrue(caloriesMetric.waitForExistence(timeout: 4))
+        guard let calories = metricValue(caloriesMetric),
+              let protein = metricValue(proteinMetric) else {
             XCTFail("The AI result did not contain numeric nutrition")
             throw NSError(domain: "MealTrackerLiveAITest", code: 1)
         }
-        let ingredientCount = app.textFields.matching(
-            NSPredicate(format: "identifier BEGINSWITH 'entry.ingredient.'")
+        let ingredientCount = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH 'loggedMeal.ingredient.'")
         ).count
 
         return (calories, protein, ingredientCount)
@@ -199,5 +201,11 @@ final class MealTrackerUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func metricValue(_ element: XCUIElement) -> Double? {
+        let raw = element.label
+        let number = raw.split(whereSeparator: { !$0.isNumber && $0 != "." }).first
+        return number.flatMap { Double($0) }
     }
 }

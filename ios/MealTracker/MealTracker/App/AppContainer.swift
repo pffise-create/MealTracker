@@ -17,10 +17,17 @@ final class AppContainer {
         )
         let repository = SwiftDataMealRepository(context: modelContainer.mainContext)
         let analyzer: any MealTextAnalyzing & MealPhotoAnalyzing = BackendMealAnalyzer() ?? DemoMealAnalyzer()
+        let entryCorrector: any MealEntryCorrecting
+        if ProcessInfo.processInfo.arguments.contains("-uiTesting") {
+            entryCorrector = DemoMealEntryCorrector()
+        } else {
+            entryCorrector = BackendMealEntryCorrector() ?? UnavailableMealEntryCorrector()
+        }
         store = MealTrackerStore(
             repository: repository,
             textAnalyzer: analyzer,
             photoAnalyzer: analyzer,
+            entryCorrector: entryCorrector,
             voiceTranscriber: LiveSpeechTranscriber(),
             venueResolver: LiveVenueResolver(),
             menuService: BackendRestaurantMenuService() ?? DemoRestaurantMenuService(),

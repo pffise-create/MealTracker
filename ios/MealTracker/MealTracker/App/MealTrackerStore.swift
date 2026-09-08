@@ -27,6 +27,7 @@ final class MealTrackerStore: ObservableObject {
     @Published private(set) var recentConfirmation: RecentConfirmation?
     @Published private(set) var settings: UserSettings = .defaults
     @Published private(set) var isAnalyzing = false
+    @Published private(set) var isCorrectingEntry = false
     @Published private(set) var appError: String?
     @Published private(set) var venueState: AsyncViewState<[VenueCandidate]> = .idle
     @Published private(set) var menuState: AsyncViewState<RestaurantMenuResult> = .idle
@@ -42,6 +43,7 @@ final class MealTrackerStore: ObservableObject {
     private let predictor: any MealPredicting
     private let textAnalyzer: any MealTextAnalyzing
     private let photoAnalyzer: any MealPhotoAnalyzing
+    private let entryCorrector: any MealEntryCorrecting
     private let menuService: any RestaurantMenuSearching
     private let adventureGenerator: any AdventureContentGenerating
     private let adventurePersistence: any AdventureStatePersisting
@@ -53,6 +55,7 @@ final class MealTrackerStore: ObservableObject {
         predictor: any MealPredicting = DeterministicMealPredictionEngine(),
         textAnalyzer: any MealTextAnalyzing = DemoMealAnalyzer(),
         photoAnalyzer: any MealPhotoAnalyzing = DemoMealAnalyzer(),
+        entryCorrector: any MealEntryCorrecting = UnavailableMealEntryCorrector(),
         voiceTranscriber: any VoiceTranscribing,
         venueResolver: any VenueResolving,
         menuService: any RestaurantMenuSearching = DemoRestaurantMenuService(),
@@ -66,6 +69,7 @@ final class MealTrackerStore: ObservableObject {
         self.predictor = predictor
         self.textAnalyzer = textAnalyzer
         self.photoAnalyzer = photoAnalyzer
+        self.entryCorrector = entryCorrector
         self.voiceTranscriber = voiceTranscriber
         self.venueResolver = venueResolver
         self.menuService = menuService
@@ -181,7 +185,9 @@ final class MealTrackerStore: ObservableObject {
         }
     }
 
-    func updateEntry(_ entry: MealEntry) {
+    @discardableResult
+    func updateEntry(_ entry: MealEntry) -> MealEntry? {
+        var savedEntry: MealEntry?
         perform {
             var corrected = entry
             corrected.correctionCount += 1
@@ -195,8 +201,10 @@ final class MealTrackerStore: ObservableObject {
                     recentConfirmation?.completionRewardSourceID = completionSource
                 }
             }
+            savedEntry = corrected
             Haptics.selection()
         }
+        return savedEntry
     }
 
     func deleteEntry(_ entry: MealEntry) {
@@ -289,6 +297,21 @@ final class MealTrackerStore: ObservableObject {
         } catch {
             appError = error.localizedDescription
             return false
+        }
+    }
+
+    func correctEntry(_ entry: MealEntry, with instruction: String) async -> MealEntryCorrection? {
+        isCorrectingEntry = true
+        defer { isCorrectingEntry = false }
+        do {
+            let correction = try await entryCorrector.correct(entry: entry, instruction: instruction)
+            var updated = entry
+            updated.nutrition = correction.nutrition
+            guard let saved = updateEntry(updated) else { return nil }
+            return MealEntryCorrection(nutrition: saved.nutrition, summary: correction.summary)
+        } catch {
+            appError = error.localizedDescription
+            return nil
         }
     }
 

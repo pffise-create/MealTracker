@@ -101,6 +101,61 @@ final class PersistenceAndStoreTests: XCTestCase {
         XCTAssertEqual(store.today.resolution(for: template.category), .skipped)
     }
 
+    func testCorrectingEntryPersistsAndRecalculatesDayNutrition() throws {
+        let repository = try makeRepository()
+        let clock = FixedClock(
+            now: Date(timeIntervalSince1970: 1_777_000_000),
+            timeZone: TimeZone(identifier: "UTC") ?? .autoupdatingCurrent
+        )
+        let store = MealTrackerStore(
+            repository: repository,
+            clock: clock,
+            voiceTranscriber: TestVoiceTranscriber(),
+            venueResolver: TestVenueResolver(),
+            healthKit: TestHealthKit()
+        )
+        store.bootstrap()
+        let template = try XCTUnwrap(SeedMealCatalog.templates.first)
+        store.log(draft: MealDraft(template: template))
+
+        var correction = try XCTUnwrap(store.today.entries.first)
+        correction.nutrition.calories = 120
+        correction.nutrition.protein = 15
+        store.updateEntry(correction)
+
+        let persisted = try XCTUnwrap(repository.fetchEntries().first)
+        XCTAssertEqual(persisted.nutrition.calories, 120)
+        XCTAssertEqual(persisted.nutrition.protein, 15)
+        XCTAssertEqual(persisted.correctionCount, 1)
+        XCTAssertEqual(store.today.nutrition.calories, 120)
+    }
+
+    func testAIEntryCorrectionAppliesNaturalLanguageInstruction() async throws {
+        let repository = try makeRepository()
+        let clock = FixedClock(
+            now: Date(timeIntervalSince1970: 1_777_000_000),
+            timeZone: TimeZone(identifier: "UTC") ?? .autoupdatingCurrent
+        )
+        let store = MealTrackerStore(
+            repository: repository,
+            clock: clock,
+            entryCorrector: DemoMealEntryCorrector(),
+            voiceTranscriber: TestVoiceTranscriber(),
+            venueResolver: TestVenueResolver(),
+            healthKit: TestHealthKit()
+        )
+        store.bootstrap()
+        let template = try XCTUnwrap(SeedMealCatalog.templates.first)
+        store.log(draft: MealDraft(template: template))
+        let entry = try XCTUnwrap(store.today.entries.first)
+
+        let result = await store.correctEntry(entry, with: "Actually, this Siggi's yogurt was 120 calories, not 150.")
+
+        XCTAssertEqual(result?.nutrition.calories, 120)
+        XCTAssertEqual(try repository.fetchEntries().first?.nutrition.calories, 120)
+        XCTAssertEqual(try repository.fetchEntries().first?.correctionCount, 1)
+    }
+
     func testHistoricalRecoveryRecalculatesStreakWithoutMacroDependency() throws {
         let repository = try makeRepository()
         let clock = FixedClock(

@@ -4,7 +4,6 @@ struct TodayView: View {
     @EnvironmentObject private var store: MealTrackerStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedDraft: MealDraft?
-    @State private var editingEntry: MealEntry?
     @State private var inspectingEntry: MealEntry?
     @State private var showingCapture = false
     @State private var showingEndDay = false
@@ -27,7 +26,7 @@ struct TodayView: View {
                     if let confirmation = store.recentConfirmation {
                         RecentConfirmationCard(
                             confirmation: confirmation,
-                            onEdit: { editingEntry = confirmation.entry },
+                            onEdit: { inspectingEntry = confirmation.entry },
                             onUndo: store.undoRecent
                         )
                         .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
@@ -83,15 +82,6 @@ struct TodayView: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $editingEntry) { entry in
-            EntryEditorSheet(entry: entry) { updated in
-                store.updateEntry(updated)
-                editingEntry = nil
-            } onDelete: {
-                store.deleteEntry(entry)
-                editingEntry = nil
-            }
         }
         .sheet(item: $inspectingEntry) { entry in
             LoggedMealDetailSheet(entry: entry)
@@ -568,8 +558,8 @@ private struct RecentConfirmationCard: View {
                     .foregroundStyle(AppColors.muted)
             }
             HStack {
-                Button("Edit", action: onEdit)
-                    .accessibilityIdentifier("recent.edit")
+                Button("Correct", action: onEdit)
+                    .accessibilityIdentifier("recent.correct")
                 Spacer()
                 Button("Undo", action: onUndo)
                     .accessibilityIdentifier("recent.undo")

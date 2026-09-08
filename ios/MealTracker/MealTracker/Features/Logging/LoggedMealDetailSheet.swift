@@ -5,7 +5,8 @@ struct LoggedMealDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var entry: MealEntry
-    @State private var showingEditor = false
+    @State private var correctionText = ""
+    @State private var correctionSummary: String?
 
     init(entry: MealEntry) {
         _entry = State(initialValue: entry)
@@ -17,6 +18,7 @@ struct LoggedMealDetailSheet: View {
                 VStack(alignment: .leading, spacing: AppSpacing.xl) {
                     mealHeader
                     totalNutrition
+                    correctionAction
                     ingredientBreakdown
                 }
                 .padding(AppSpacing.lg)
@@ -28,21 +30,6 @@ struct LoggedMealDetailSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Edit") { showingEditor = true }
-                        .accessibilityIdentifier("loggedMeal.edit")
-                }
-            }
-        }
-        .sheet(isPresented: $showingEditor) {
-            EntryEditorSheet(entry: entry) { updated in
-                store.updateEntry(updated)
-                entry = updated
-                showingEditor = false
-            } onDelete: {
-                store.deleteEntry(entry)
-                showingEditor = false
-                dismiss()
             }
         }
     }
@@ -148,6 +135,65 @@ struct LoggedMealDetailSheet: View {
         }
     }
 
+    private var correctionAction: some View {
+        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+            HStack(spacing: AppSpacing.xs) {
+                LucideIcon(icon: .sparkles, size: 17)
+                    .foregroundStyle(AppColors.brand)
+                Text("CORRECT WITH AI")
+                    .font(.appBody(.caption2, weight: .bold))
+                    .tracking(1.1)
+                    .foregroundStyle(AppColors.brand)
+            }
+
+            TextField("e.g. Actually, this was 120 calories", text: $correctionText, axis: .vertical)
+                .font(.appBody(.callout))
+                .foregroundStyle(AppColors.ink)
+                .lineLimit(2...4)
+                .padding(AppSpacing.sm)
+                .background(AppColors.background)
+                .clipShape(RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: AppRadius.small, style: .continuous)
+                        .stroke(AppColors.border, lineWidth: 1)
+                }
+                .accessibilityIdentifier("loggedMeal.correctionInput")
+
+            if let correctionSummary {
+                Text(correctionSummary)
+                    .font(.appBody(.caption))
+                    .foregroundStyle(AppColors.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("loggedMeal.correctionSummary")
+            }
+
+            Button {
+                Task {
+                    guard let correction = await store.correctEntry(entry, with: correctionText) else { return }
+                    entry.nutrition = correction.nutrition
+                    entry.correctionCount += 1
+                    correctionText = ""
+                    correctionSummary = correction.summary
+                }
+            } label: {
+                HStack(spacing: AppSpacing.xs) {
+                    if store.isCorrectingEntry {
+                        ProgressView().tint(.white)
+                    } else {
+                        LucideIcon(icon: .sparkles, size: 17)
+                    }
+                    Text(store.isCorrectingEntry ? "Updating meal…" : "Update with AI")
+                }
+            }
+            .buttonStyle(PrimaryActionButtonStyle())
+            .disabled(correctionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isCorrectingEntry)
+            .accessibilityIdentifier("loggedMeal.applyCorrection")
+        }
+        .padding(AppSpacing.md)
+        .appSurface(prominent: entry.correctionCount > 0)
+        .accessibilityElement(children: .contain)
+    }
+
     private func ingredientRow(_ ingredient: LoggedIngredient) -> some View {
         let nutrition = ingredient.nutrition.scaled(by: entry.portionFactor)
         return VStack(alignment: .leading, spacing: AppSpacing.xs) {
@@ -184,6 +230,9 @@ struct LoggedMealDetailSheet: View {
                 .foregroundStyle(AppColors.muted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(value(amount, unit: unit)) \(label)")
+        .accessibilityIdentifier("loggedMeal.metric.\(label == "Carbs" ? "carbohydrates" : label.lowercased())")
     }
 
     private func sectionLabel(_ title: String) -> some View {

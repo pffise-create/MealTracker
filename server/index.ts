@@ -21,6 +21,11 @@ type RestaurantMenuRequest = {
   longitude?: unknown;
 };
 
+type EntryCorrectionRequest = {
+  entry?: unknown;
+  instruction?: unknown;
+};
+
 const nutritionSchema = {
   type: "object",
   additionalProperties: false,
@@ -130,6 +135,29 @@ const restaurantMenuValidator = z.object({
   }
 });
 
+const entryCorrectionSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["applied", "calories", "protein", "fat", "carbohydrates", "summary"],
+  properties: {
+    applied: { type: "boolean" },
+    calories: { type: "number" },
+    protein: { type: "number" },
+    fat: { type: "number" },
+    carbohydrates: { type: "number" },
+    summary: { type: "string" },
+  },
+};
+
+const entryCorrectionValidator = z.object({
+  applied: z.boolean(),
+  calories: z.number().finite().min(0).max(10_000),
+  protein: z.number().finite().min(0).max(1_000),
+  fat: z.number().finite().min(0).max(1_000),
+  carbohydrates: z.number().finite().min(0).max(1_000),
+  summary: z.string().trim().min(1).max(200),
+}).strict();
+
 function normalizedEvidence(value: string) {
   return value.toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
 }
@@ -237,6 +265,75 @@ async function startServer() {
     } catch (error) {
       console.error("Meal analysis request failed", error);
       res.status(502).json({ error: "Meal analysis is temporarily unavailable." });
+    }
+  });
+
+  app.post("/api/entry-correction", async (req, res) => {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const backendToken = process.env.MEALTRACKER_BACKEND_TOKEN;
+    if (!apiKey || !backendToken) {
+      res.status(503).json({ error: "AI corrections are not configured on this server." });
+      return;
+    }
+    if (req.get("Authorization") !== `Bearer ${backendToken}`) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+
+    const body = req.body as EntryCorrectionRequest;
+    const instruction = typeof body.instruction === "string" ? body.instruction.trim() : "";
+    if (!instruction || !body.entry || typeof body.entry !== "object") {
+      res.status(400).json({ error: "Provide an existing meal and a correction." });
+      return;
+    }
+
+    const instructions = `You correct one existing meal log from the user's short note. The supplied existing entry is the authoritative baseline. Apply only a change that is clearly stated or unambiguously implied by the note. Preserve every nutrient that the note does not change. If the user states an exact calorie count, return that exact calories value. If the correction cannot be applied safely, return applied=false and return the baseline nutrition unchanged. Do not add foods, remove foods, rename the meal, or estimate new nutrition. summary must be a short, factual explanation of the correction or why no change was made.`;
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          input: [
+            { role: "developer", content: [{ type: "input_text", text: instructions }] },
+            {
+              role: "user",
+              content: [{
+                type: "input_text",
+                text: `Existing meal entry:\n${JSON.stringify(body.entry)}\n\nCorrection note:\n${instruction}`,
+              }],
+            },
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "meal_entry_correction",
+              strict: true,
+              schema: entryCorrectionSchema,
+            },
+          },
+          max_output_tokens: 220,
+          temperature: 0,
+          store: false,
+        }),
+      });
+      if (!response.ok) {
+        console.error("OpenAI meal correction failed", response.status, await response.text());
+        res.status(502).json({ error: "AI correction is temporarily unavailable." });
+        return;
+      }
+
+      const outputText = extractOutputText(await response.json());
+      if (!outputText) throw new Error("OpenAI returned no correction output");
+      const correction = entryCorrectionValidator.parse(JSON.parse(outputText));
+      res.json({ correction });
+    } catch (error) {
+      console.error("Meal correction request failed", error);
+      res.status(502).json({ error: "AI correction is temporarily unavailable." });
     }
   });
 
