@@ -74,21 +74,48 @@ struct BackendMealAnalyzer: MealTextAnalyzing, MealPhotoAnalyzing {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        // Render's free instances can spend roughly 50 seconds waking before
-        // OpenAI processing begins. Leave enough room for both phases.
+        // The server bounds its upstream OpenAI call. Keep room for a transient
+        // retry without leaving the capture sheet indefinitely unavailable.
         request.timeoutInterval = 90
         request.httpBody = try JSONEncoder().encode(payload)
 
-        let data: Data
-        let response: URLResponse
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch let error as URLError where error.code == .timedOut {
-            throw MealAnalysisError.timedOut
+        for attempt in 0...1 {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse else {
+                    throw MealAnalysisError.unavailable
+                }
+                guard 200..<300 ~= http.statusCode else {
+                    if attempt == 0 && [502, 503, 504].contains(http.statusCode) {
+                        try await Task.sleep(for: .milliseconds(500))
+                        continue
+                    }
+                    throw MealAnalysisError.unavailable
+                }
+                return try result(from: data, payload: payload)
+            } catch let error as MealAnalysisError {
+                throw error
+            } catch let error as URLError where error.code == .timedOut {
+                throw MealAnalysisError.timedOut
+            } catch let error as URLError where attempt == 0 && retryable(error) {
+                try await Task.sleep(for: .milliseconds(500))
+                continue
+            } catch {
+                throw MealAnalysisError.unavailable
+            }
         }
-        guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
-            throw MealAnalysisError.unavailable
-        }
+
+        throw MealAnalysisError.unavailable
+    }
+
+    private func retryable(_ error: URLError) -> Bool {
+        [.networkConnectionLost, .cannotConnectToHost, .notConnectedToInternet].contains(error.code)
+    }
+
+    private func result(
+        from data: Data,
+        payload: BackendMealAnalysisRequest
+    ) throws -> MealAnalysisResult {
         let decoded = try JSONDecoder().decode(BackendMealAnalysisResponse.self, from: data)
         let ingredientSlots = decoded.analysis.items.enumerated().map { index, item in
             let identifier = "ai-item-\(index)"

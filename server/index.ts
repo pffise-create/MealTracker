@@ -195,6 +195,21 @@ async function startServer() {
   const server = createServer(app);
 
   app.use(express.json({ limit: "12mb" }));
+  app.use((req, res, next) => {
+    const startedAt = Date.now();
+    res.on("finish", () => {
+      if (!req.path.startsWith("/api/")) return;
+      // Keep enough operational detail to diagnose failed mobile calls without
+      // recording meal text, photos, credentials, or model output.
+      console.info(JSON.stringify({
+        event: "api_request",
+        route: req.path,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      }));
+    });
+    next();
+  });
 
   app.post("/api/meal-analysis", async (req, res) => {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -247,6 +262,7 @@ async function startServer() {
           temperature: 0.2,
           store: false,
         }),
+        signal: AbortSignal.timeout(60_000),
       });
       if (!response.ok) {
         console.error("OpenAI meal analysis failed", response.status, await response.text());
