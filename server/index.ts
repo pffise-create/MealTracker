@@ -34,6 +34,7 @@ const nutritionSchema = {
     name: { type: "string" },
     items: {
       type: "array",
+      minItems: 1,
       items: {
         type: "object",
         additionalProperties: false,
@@ -232,7 +233,7 @@ async function startServer() {
       return;
     }
 
-    const instructions = `Estimate nutrition only for foods and drinks explicitly supplied by the user. The meal category (${category(body.category)}) is labeling metadata, never evidence of additional food. Do not complete a meal, add typical sides, recommend pairings, or invent foods that were not named or visible. You may infer a reasonable quantity or preparation only for an item that is actually present in the input. For every text-described item, set evidence to the shortest exact contiguous phrase from the meal description that supports that item; one evidence phrase may support only one item. For image-only items, set evidence to "visible in image". If the description is "a beer", return exactly one beer item. Name the result from the supplied items rather than using a generic category name. Calculate item macros and ensure the top-level totals equal their sum. Use non-negative finite numbers and keep assumptions short and material.`;
+    const instructions = `Estimate nutrition only for foods and drinks explicitly supplied by the user. The meal category (${category(body.category)}) is labeling metadata, never evidence of additional food. Do not complete a meal, add typical sides, recommend pairings, or invent foods that were not named or visible. You may infer a reasonable quantity or preparation only for an item that is actually present in the input. Never return an empty items array: every non-empty text description must produce at least one item. For every text-described item, set evidence to the shortest exact contiguous phrase from the meal description that supports that item; one evidence phrase may support only one item. For image-only items, set evidence to "visible in image". If the description is "a beer", return exactly one beer item. Name the result from the supplied items rather than using a generic category name. Calculate item macros and ensure the top-level totals equal their sum. Use non-negative finite numbers and keep assumptions short and material.`;
     const content: Array<Record<string, string>> = [];
     if (text) content.push({ type: "input_text", text: `Meal description: ${text}` });
     if (imageBase64) content.push({ type: "input_image", image_url: `data:${mimeType};base64,${imageBase64}` });
