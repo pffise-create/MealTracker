@@ -37,15 +37,12 @@ final class LiveVenueResolver: NSObject, VenueResolving, @preconcurrency CLLocat
 
     func resolveForegroundVenues() async throws -> [VenueCandidate] {
         let location = try await requestLocation()
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = "restaurant"
-        request.region = MKCoordinateRegion(
-            center: location.coordinate,
-            latitudinalMeters: 600,
-            longitudinalMeters: 600
-        )
-        let response = try await MKLocalSearch(request: request).start()
-        return response.mapItems.prefix(4).enumerated().map { index, item in
+        async let restaurantItems = nearbyMapItems(matching: "restaurant", around: location)
+        async let cafeItems = nearbyMapItems(matching: "cafe", around: location)
+        let mapItems = await restaurantItems + cafeItems
+
+        var seenVenueKeys = Set<String>()
+        let venues = mapItems.enumerated().compactMap { index, item -> (venue: VenueCandidate, distance: CLLocationDistance)? in
             let coordinate: CLLocationCoordinate2D
             let subtitle: String
             #if compiler(>=6.2)
@@ -60,9 +57,14 @@ final class LiveVenueResolver: NSObject, VenueResolving, @preconcurrency CLLocat
             coordinate = item.placemark.coordinate
             subtitle = item.placemark.title ?? "Near your current location"
             #endif
-            return VenueCandidate(
+
+            let name = item.name ?? "Nearby restaurant"
+            let venueKey = "\(name.lowercased())|\(coordinate.latitude.rounded(toPlaces: 4))|\(coordinate.longitude.rounded(toPlaces: 4))"
+            guard seenVenueKeys.insert(venueKey).inserted else { return nil }
+
+            let venue = VenueCandidate(
                 id: item.name.map { "\($0)-\(coordinate.latitude)-\(coordinate.longitude)" } ?? "venue-\(index)",
-                name: item.name ?? "Nearby restaurant",
+                name: name,
                 subtitle: subtitle,
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude,
@@ -70,6 +72,28 @@ final class LiveVenueResolver: NSObject, VenueResolving, @preconcurrency CLLocat
                     ? "Approximate location"
                     : "Nearby result"
             )
+            let distance = location.distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
+            return (venue, distance)
+        }
+        return venues
+            .sorted { $0.distance < $1.distance }
+            .prefix(8)
+            .map(\.venue)
+    }
+
+    private func nearbyMapItems(matching query: String, around location: CLLocation) async -> [MKMapItem] {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.region = MKCoordinateRegion(
+            center: location.coordinate,
+            latitudinalMeters: 1_500,
+            longitudinalMeters: 1_500
+        )
+
+        do {
+            return try await MKLocalSearch(request: request).start().mapItems
+        } catch {
+            return []
         }
     }
 
@@ -117,5 +141,12 @@ final class LiveVenueResolver: NSObject, VenueResolving, @preconcurrency CLLocat
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         continuation?.resume(throwing: error)
         continuation = nil
+    }
+}
+
+private extension Double {
+    func rounded(toPlaces places: Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        return (self * divisor).rounded() / divisor
     }
 }
