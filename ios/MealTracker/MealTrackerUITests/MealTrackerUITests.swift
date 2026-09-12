@@ -66,7 +66,18 @@ final class MealTrackerUITests: XCTestCase {
         app.buttons["today.endDay"].tap()
         XCTAssertTrue(app.buttons["endDay.finish"].waitForExistence(timeout: 2))
         app.buttons["endDay.finish"].tap()
-        XCTAssertTrue(app.staticTexts["Today is fully resolved"].waitForExistence(timeout: 3))
+        let completedLog = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier == %@ AND label BEGINSWITH %@",
+                "today.completeness", "Daily log, 4 of 4 resolved."
+            )
+        ).firstMatch
+        XCTAssertTrue(completedLog.waitForExistence(timeout: 3))
+        for category in ["Breakfast", "Lunch", "Dinner", "Snacks"] {
+            XCTAssertTrue(completedLog.label.contains("\(category), Skipped or none"))
+        }
+        XCTAssertTrue(app.staticTexts["1 day"].exists, "Resolving today should start a one-day streak")
+        assertBankedXP(8)
     }
 
     func testRecoverIncompleteHistoricalDay() {
@@ -90,7 +101,16 @@ final class MealTrackerUITests: XCTestCase {
             XCTAssertTrue(button.waitForExistence(timeout: 2))
             button.tap()
         }
-        XCTAssertTrue(app.staticTexts["Day complete"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["4 of 4 logged"].firstMatch.waitForExistence(timeout: 3))
+        for category in ["lunch", "dinner", "snacks"] {
+            XCTAssertFalse(app.buttons["history.skip.\(category)"].exists)
+        }
+        app.buttons["Done"].tap()
+        XCTAssertEqual(app.buttons["calendar.\(identifier)"].label, "\(identifier), complete")
+        XCTAssertTrue(dayButton.label.contains("4 of 4 logged"))
+        app.tabBars.buttons["Today"].tap()
+        XCTAssertTrue(app.staticTexts["1 day"].waitForExistence(timeout: 3), "Recovering yesterday should restore the current streak")
+        assertBankedXP(11)
     }
 
     func testNavigatePrimaryDestinations() {
@@ -201,6 +221,13 @@ final class MealTrackerUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func assertBankedXP(_ expected: Int, file: StaticString = #filePath, line: UInt = #line) {
+        app.tabBars.buttons["Adventure"].tap()
+        let bank = app.descendants(matching: .any)["adventure.balance"]
+        XCTAssertTrue(bank.waitForExistence(timeout: 3), file: file, line: line)
+        XCTAssertEqual(bank.label, "\(expected) experience points banked", file: file, line: line)
     }
 
     private func metricValue(_ element: XCUIElement) -> Double? {

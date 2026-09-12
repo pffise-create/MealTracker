@@ -22,7 +22,7 @@ struct RootTabView: View {
                 .tag(1)
                 .accessibilityIdentifier("tab.history")
 
-            AdventureView()
+            AdventureView(onLogMeal: { selection = 0 })
                 .tabItem {
                     LucideIcon(icon: .compass)
                     Text("Adventure")

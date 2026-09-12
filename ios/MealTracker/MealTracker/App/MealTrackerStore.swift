@@ -33,6 +33,7 @@ final class MealTrackerStore: ObservableObject {
     @Published private(set) var menuState: AsyncViewState<RestaurantMenuResult> = .idle
     @Published private(set) var healthState: AsyncViewState<HealthContextSnapshot> = .idle
     @Published private(set) var adventure: AdventureState
+    @Published private(set) var commonwealth: CommonwealthState
 
     let voiceTranscriber: any VoiceTranscribing
     let venueResolver: any VenueResolving
@@ -47,6 +48,7 @@ final class MealTrackerStore: ObservableObject {
     private let menuService: any RestaurantMenuSearching
     private let adventureGenerator: any AdventureContentGenerating
     private let adventurePersistence: any AdventureStatePersisting
+    private let commonwealthPersistence: any CommonwealthStatePersisting
     private let templates: [MealTemplate]
 
     init(
@@ -62,6 +64,7 @@ final class MealTrackerStore: ObservableObject {
         healthKit: any HealthKitReading,
         adventureGenerator: any AdventureContentGenerating = DemoAdventureContentGenerator(),
         adventurePersistence: (any AdventureStatePersisting)? = nil,
+        commonwealthPersistence: (any CommonwealthStatePersisting)? = nil,
         templates: [MealTemplate] = SeedMealCatalog.templates
     ) {
         self.repository = repository
@@ -75,9 +78,26 @@ final class MealTrackerStore: ObservableObject {
         self.menuService = menuService
         self.healthKit = healthKit
         self.adventureGenerator = adventureGenerator
-        let resolvedAdventurePersistence = adventurePersistence ?? UserDefaultsAdventureStatePersistence()
+        let resolvedAdventurePersistence: any AdventureStatePersisting
+        if let adventurePersistence {
+            resolvedAdventurePersistence = adventurePersistence
+        } else if ProcessInfo.processInfo.arguments.contains("-uiTesting") {
+            resolvedAdventurePersistence = CommonwealthUITestLegacyPersistence()
+        } else {
+            resolvedAdventurePersistence = UserDefaultsAdventureStatePersistence()
+        }
         self.adventurePersistence = resolvedAdventurePersistence
         adventure = resolvedAdventurePersistence.load() ?? .initial
+        let resolvedCommonwealthPersistence: any CommonwealthStatePersisting
+        if let commonwealthPersistence {
+            resolvedCommonwealthPersistence = commonwealthPersistence
+        } else if ProcessInfo.processInfo.arguments.contains("-uiTesting") {
+            resolvedCommonwealthPersistence = InMemoryCommonwealthStatePersistence()
+        } else {
+            resolvedCommonwealthPersistence = UserDefaultsCommonwealthStatePersistence()
+        }
+        self.commonwealthPersistence = resolvedCommonwealthPersistence
+        commonwealth = resolvedCommonwealthPersistence.load() ?? .initial
         self.templates = templates
         let identifier = LocalDayResolver.identifier(for: clock.now, in: clock.timeZone)
         today = DaySnapshot(
@@ -93,6 +113,7 @@ final class MealTrackerStore: ObservableObject {
         refresh()
         seedUITestRecoveryDayIfNeeded()
         seedUITestRestaurantIfNeeded()
+        seedUITestCommonwealthIfNeeded()
     }
 
     func refreshForSignificantTimeChange() {
@@ -368,7 +389,41 @@ final class MealTrackerStore: ObservableObject {
     }
 
     var adventureEnergyBalance: Int {
-        max(0, resourceBalance - adventure.energySpent)
+        commonwealthXPBalance
+    }
+
+    var commonwealthXPBalance: Int {
+        max(0, resourceBalance - adventure.energySpent - commonwealth.xpSpent)
+    }
+
+    func performCommonwealth(_ action: CommonwealthAction) {
+        perform {
+            // Read the authoritative meal ledger before spending; undo and old-game
+            // spending can reduce the bank even after a view has displayed a cost.
+            resourceBalance = try repository.fetchRewards().map(\.amount).reduce(0, +)
+            let updated = try CommonwealthEngine.resolve(action, in: commonwealth, availableXP: commonwealthXPBalance)
+            try commonwealthPersistence.save(updated)
+            commonwealth = updated
+            Haptics.selection()
+        }
+    }
+
+    func travelCommonwealth(to site: CommonwealthSite) {
+        perform {
+            let updated = try CommonwealthEngine.travel(to: site, in: commonwealth)
+            try commonwealthPersistence.save(updated)
+            commonwealth = updated
+            Haptics.selection()
+        }
+    }
+
+    func fightCommonwealth(_ tactic: CommonwealthTactic) {
+        perform {
+            let updated = try CommonwealthEngine.fight(tactic, in: commonwealth)
+            try commonwealthPersistence.save(updated)
+            commonwealth = updated
+            Haptics.selection()
+        }
     }
 
     func chooseAdventure(_ choice: AdventureChoiceID) {
@@ -381,6 +436,18 @@ final class MealTrackerStore: ObservableObject {
             try adventurePersistence.save(updated)
             adventure = updated
             Haptics.selection()
+        }
+    }
+
+    private func seedUITestCommonwealthIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-uiTesting"),
+              ProcessInfo.processInfo.arguments.contains("-uiTestingCommonwealth"),
+              today.entries.isEmpty else { return }
+        // Exercise the same entry/reward path as meal logging. The repository and
+        // Commonwealth persistence are both in-memory in this UI-test mode.
+        if let template = templates.first {
+            for _ in 0..<8 { log(draft: MealDraft(template: template)) }
+            recentConfirmation = nil
         }
     }
 

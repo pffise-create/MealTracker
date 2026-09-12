@@ -13,4 +13,5 @@ The complete bundled notices are under `ios/MealTracker/MealTracker/Resources/Li
 ## Project-created assets
 
 - The Electric Blue app icon and segmented-ring mark were created for MealTracker in this repository and do not require third-party attribution.
+- Briar Glen's valley, citizen portraits, and fighter atlas were generated for this project, then resized/compressed for the native app. No third-party game imagery was used. Asset briefs and shipping dimensions are recorded in [ios/COMMONWEALTH.md](ios/COMMONWEALTH.md).
 - Cold-start food recognition uses Lucide food symbols. User meal photos are preferred when a future learned-thumbnail policy is implemented.

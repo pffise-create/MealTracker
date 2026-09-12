@@ -30,10 +30,10 @@
 - [x] Foreground location/venue UI with denied and unreliable-menu fallbacks
 - [x] Protocols for text/photo analysis, voice, location, menu, HealthKit, and adventure generation
 - [x] Native contextual camera, photo-library, speech, location, and HealthKit seams
-- [x] Banked resource ledger and persistent deterministic Adventure campaign
-- [x] Five-region map, companion recruitment, quest log, inventory, consequential choices, dice, death, and one-use resurrection
+- [x] Banked meal XP ledger and persistent local Briar Glen commonwealth
+- [x] Six-site illustrated valley, citizen households, seven improvements, tactical patrols, and recurring council decisions
 
-## Verification
+## Original milestone verification (historical; predates Briar Glen)
 
 - [x] Unit tests for deterministic domain logic and persistence round trips
 - [x] UI test coverage for the milestone’s primary flows
@@ -47,7 +47,26 @@
 - [x] Adventure UI test and screenshot inspection pass on the smallest installed simulator (iPhone 16e) in light mode
 - [x] Adventure UI test and screenshot inspection pass on iPhone 17 in dark mode at Accessibility XXXL
 - [x] Adventure supports renewable seeded expeditions, honest pre-choice odds, six trait ranks, graded runs, renown, and successor continuity without network or media assets
-- [x] Independent fantasy-game rubric evaluation scores Adventure 85/100 (81–84% predicted enthusiast approval; 82/100 certification bar)
+- [x] Prior Adventure received an agent rubric review. Its score was a heuristic, not a user study or evidence of an enthusiast approval percentage; that interface is now superseded by Briar Glen.
+
+## Briar Glen verification — September 12, 2026
+
+- [x] Xcode 26.3 (17C529), iOS 26.2: final clean simulator build passes with no compiler warnings reported
+- [x] iPhone 17 light: all 42 local checks pass — 35 unit tests and 7 UI tests
+- [x] New unit coverage includes 11 Commonwealth engine tests and 3 store/persistence tests; seven-day banking, legacy spending, undo debt, save failures, combat/cover, council tradeoffs, and bounded history are verified
+- [x] iPhone 16e (smallest installed simulator), light/default text: all 3 game UI tests pass on the final UI
+- [x] iPhone 16e, dark/Accessibility XXXL: all 3 game UI tests pass, including retreat, XP gating, and return to Today
+- [x] iPhone 17, dark/Accessibility XXXL: additional introduction → water → map → citizens → journal visual test passes
+- [x] Screenshots inspected for introduction, map, citizen details, action outcomes, journal, and combat; all five tactics, combatants, health, and intent fit together at normal text sizes on both phones
+- [x] Fixed inherited accessibility identifiers, first-battle sequencing, post-action scrolling, scalable location navigation, and large-text battle controls
+- [x] Existing completion/recovery UI assertions updated to check actual resolved state, streak, and earned XP after earlier app-copy changes; both pass
+- [x] Independent critic: 8.0/10 for the first playable region. Criteria and limitations are in `COMMONWEALTH.md`; no human approval percentage is claimed
+- [x] Three shipping art assets total 1,372,112 bytes (~1.31 MiB), with no new dependencies or gameplay network calls
+- [ ] Physical-device VoiceOver order, device peak-memory profiling, and longer-term human playtesting remain unverified
+
+Local result bundles: `/tmp/mealtracker-commonwealth.KHtCAf/release-standard.xcresult`, `release-small.xcresult`, `release-ax.xcresult`, and `ax-visual.xcresult`. The final clean-build products are under `/tmp/mealtracker-commonwealth.KHtCAf/final-build`. UI screenshots were exported beside these bundles and selected handoff images saved in the Codex workspace's `artifacts/commonwealth` folder, not the app bundle.
+
+Live AI/restaurant network tests were explicitly excluded from this game-focused regression run. React and backend source were unchanged; their builds were not rerun in this pass. User-owned Xcode project/scheme changes were preserved and excluded from the game commit.
 
 ## Live-service boundary
 

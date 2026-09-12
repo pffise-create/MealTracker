@@ -21,7 +21,7 @@ struct TodayView: View {
                         day: store.today,
                         onSelect: { inspectingEntry = $0 }
                     )
-                    HabitRail(streak: store.streak.current, resources: store.resourceBalance)
+                    HabitRail(streak: store.streak.current, resources: store.commonwealthXPBalance)
 
                     if let confirmation = store.recentConfirmation {
                         RecentConfirmationCard(
@@ -491,13 +491,13 @@ private struct HabitRail: View {
                 VStack(spacing: 0) {
                     railItem(icon: .flame, title: "Streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
                     Divider()
-                    railItem(icon: .gem, title: "Energy", value: "\(resources)")
+                    railItem(icon: .gem, title: "XP", value: "\(resources)")
                 }
             } else {
                 HStack(spacing: 0) {
                     railItem(icon: .flame, title: "Streak", value: "\(streak) \(streak == 1 ? "day" : "days")")
                     Divider().padding(.vertical, AppSpacing.xs)
-                    railItem(icon: .gem, title: "Energy", value: "\(resources)")
+                    railItem(icon: .gem, title: "XP", value: "\(resources)")
                 }
             }
         }
@@ -536,7 +536,7 @@ private struct RecentConfirmationCard: View {
                     Text("Logged \(confirmation.entry.name)")
                         .font(.appBody(.subheadline, weight: .bold))
                         .foregroundStyle(AppColors.ink)
-                    Text("+\(RewardEngine.mealAmount) energy")
+                    Text("+\(RewardEngine.mealAmount) XP")
                         .font(.appBody(.caption))
                         .foregroundStyle(AppColors.muted)
                 }

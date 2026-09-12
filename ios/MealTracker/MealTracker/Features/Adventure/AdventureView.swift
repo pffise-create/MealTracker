@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct AdventureView: View {
+// Kept as a source reference for the original expedition and its saved state.
+struct LegacyAdventureView: View {
     @EnvironmentObject private var store: MealTrackerStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize

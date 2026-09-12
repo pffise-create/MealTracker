@@ -108,9 +108,19 @@ Meal data remains local. Encrypted iCloud sync, export/delete tooling, and remin
 | Camera and photo selection | Native camera and Photos picker |
 | Text/photo nutrition analysis | OpenAI `gpt-4o-mini` through an optional private backend; explicit local demo fallback |
 | Restaurant menu lookup | Explicit no-reliable-menu provider and complete fallbacks |
-| Adventure | Persistent deterministic campaign plus renewable three-encounter expeditions, visible odds, trait builds, companions, renown, death, resurrection, and successors |
+| Adventure | Briar Glen: a local frontier/commonwealth game with a visible six-site valley, citizen households, seven improvements, turn-based patrols, and recurring council decisions |
 
 The OpenAI key is server-only; the app stores its separate backend access token in Keychain. See [ios/CONFIGURATION.md](ios/CONFIGURATION.md) for deployment and Xcode configuration.
+
+## Briar Glen commonwealth
+
+Adventure now begins with a deed, three families, a rival claim, and an immediate task: restore the valley's water. Tap locations on the illustrated map to visit citizens, gather materials, and build. Secure the crossing in turn-based combat, then choose a watchtower or trading post and establish a commonwealth hall. The council subsequently brings recurring housing, toll, and woodland decisions with real resource and trust consequences.
+
+Each meal banks **3 XP**; a completed day adds **8 XP**. Unspent XP rolls over indefinitely, including days you do not play. XP starts projects and patrols; combat turns and inspecting the world are free. There are no offline attacks or resource decay. The prior Adventure save and its spending remain preserved separately; upgrading does not refund previously spent XP or remove meal history.
+
+This is one playable region, not an open-world RPG or an endless campaign. Three reusable art assets total about **1.3 MiB**; native drawing supplies changing buildings and map figures. No game engine dependency, network calls, or continuously running simulation is added. See [ios/COMMONWEALTH.md](ios/COMMONWEALTH.md) for mechanics, persistence, assets, and verification scope.
+
+Verified September 12, 2026 with Xcode 26.3/iOS 26.2: 35 unit tests and 7 local UI tests pass on iPhone 17; all three game flows also pass on iPhone 16e in light mode and dark mode with Accessibility XXXL. Simulator screenshots were inspected. Physical-device VoiceOver, peak-memory profiling, and long-term human playtesting remain open; live AI/restaurant tests were outside this game pass.
 
 ## Visual and accessibility QA
 
