@@ -186,13 +186,21 @@ struct CaptureSheet: View {
 
     private var voiceEntry: some View {
         VStack(alignment: .leading, spacing: AppSpacing.md) {
-            ZStack {
-                Circle().fill(recording ? AppColors.brand : AppColors.brandSoft)
-                LucideIcon(icon: recording ? .audioLines : .mic, size: 34)
-                    .foregroundStyle(recording ? Color.white : AppColors.brand)
+            Button {
+                recording ? stopRecording() : startRecording()
+            } label: {
+                ZStack {
+                    Circle().fill(recording ? AppColors.brand : AppColors.brandSoft)
+                    LucideIcon(icon: recording ? .audioLines : .mic, size: 34)
+                        .foregroundStyle(recording ? Color.white : AppColors.brand)
+                }
+                .frame(width: 78, height: 78)
             }
-            .frame(width: 78, height: 78)
+            .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
+            .accessibilityLabel(recording ? "Stop listening" : "Start listening")
+            .accessibilityHint(recording ? "Stops voice capture" : "Starts voice capture")
+            .accessibilityIdentifier("capture.record")
 
             Text(transcript.isEmpty ? "Transcript" : transcript)
                 .font(.appBody())
@@ -203,11 +211,6 @@ struct CaptureSheet: View {
                 .accessibilityIdentifier("capture.transcript")
 
             localErrorText
-            Button(recording ? "Stop listening" : "Start listening") {
-                recording ? stopRecording() : startRecording()
-            }
-            .buttonStyle(QuietActionButtonStyle())
-            .accessibilityIdentifier("capture.record")
 
             Button {
                 Task {
