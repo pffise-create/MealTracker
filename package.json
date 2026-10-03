@@ -12,6 +12,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
+    "test:server": "node --import tsx --test server/*.test.ts",
     "format": "prettier --write ."
   },
   "dependencies": {
