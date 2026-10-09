@@ -36,52 +36,51 @@ const nutritionSchema = {
     name: { type: "string" },
     items: {
       type: "array",
-      minItems: 1,
-      maxItems: 20,
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["name", "quantity", "evidence", "calories", "protein", "fat", "carbohydrates"],
+        required: ["name", "quantity", "calories", "protein", "fat", "carbohydrates"],
         properties: {
           name: { type: "string" },
           quantity: { type: "string" },
-          evidence: { type: "string" },
-          calories: { type: "number" },
-          protein: { type: "number" },
-          fat: { type: "number" },
-          carbohydrates: { type: "number" },
+          calories: { type: ["number", "null"] },
+          protein: { type: ["number", "null"] },
+          fat: { type: ["number", "null"] },
+          carbohydrates: { type: ["number", "null"] },
         },
       },
     },
-    calories: { type: "number" },
-    protein: { type: "number" },
-    fat: { type: "number" },
-    carbohydrates: { type: "number" },
+    calories: { type: ["number", "null"] },
+    protein: { type: ["number", "null"] },
+    fat: { type: ["number", "null"] },
+    carbohydrates: { type: ["number", "null"] },
     confidence: { type: "string", enum: ["low", "medium", "high"] },
     assumptions: { type: "array", items: { type: "string" } },
   },
 };
 
-const mealAnalysisValidator = z.object({
-  name: z.string().trim().min(1).max(120),
-  items: z.array(z.object({
-    name: z.string().trim().min(1).max(120),
-    quantity: z.string().trim().min(1).max(80),
-    evidence: z.string().trim().min(1).max(120),
-    calories: z.number().finite().min(0).max(10_000),
-    protein: z.number().finite().min(0).max(1_000),
-    fat: z.number().finite().min(0).max(1_000),
-    carbohydrates: z.number().finite().min(0).max(1_000),
-  }).strict()).min(1).max(20),
-  calories: z.number().finite().min(0).max(10_000),
-  protein: z.number().finite().min(0).max(1_000),
-  fat: z.number().finite().min(0).max(1_000),
-  carbohydrates: z.number().finite().min(0).max(1_000),
-  confidence: z.enum(["low", "medium", "high"]),
-  assumptions: z.array(z.string().trim().min(1).max(180)).max(8),
-}).strict();
+const nutrientValidator = z.number().finite().nonnegative().nullable();
 
-type ValidatedMealAnalysis = z.infer<typeof mealAnalysisValidator>;
+const mealAnalysisValidator = z.object({
+  name: z.string().trim().min(1),
+  items: z.array(z.object({
+    name: z.string().trim().min(1),
+    quantity: z.string().trim().min(1),
+    // Tolerate a retired provider field, but never gate a meal on quotations
+    // or a hard-coded food vocabulary. The canonical response omits it.
+    evidence: z.unknown().optional(),
+    calories: nutrientValidator,
+    protein: nutrientValidator,
+    fat: nutrientValidator,
+    carbohydrates: nutrientValidator,
+  }).strict().transform(({ evidence: _evidence, ...item }) => item)),
+  calories: nutrientValidator,
+  protein: nutrientValidator,
+  fat: nutrientValidator,
+  carbohydrates: nutrientValidator,
+  confidence: z.enum(["low", "medium", "high"]),
+  assumptions: z.array(z.string()),
+}).strict();
 
 const restaurantMenuSchema = {
   type: "object",
@@ -142,9 +141,27 @@ const restaurantMenuValidator = z.object({
 const entryCorrectionSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["applied", "calories", "protein", "fat", "carbohydrates", "summary"],
+  required: ["applied", "name", "items", "portionLabel", "calories", "protein", "fat", "carbohydrates", "summary"],
   properties: {
     applied: { type: "boolean" },
+    name: { type: "string" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "quantity", "calories", "protein", "fat", "carbohydrates"],
+        properties: {
+          name: { type: "string" },
+          quantity: { type: "string" },
+          calories: { type: ["number", "null"] },
+          protein: { type: ["number", "null"] },
+          fat: { type: ["number", "null"] },
+          carbohydrates: { type: ["number", "null"] },
+        },
+      },
+    },
+    portionLabel: { type: "string" },
     calories: { type: ["number", "null"] },
     protein: { type: ["number", "null"] },
     fat: { type: ["number", "null"] },
@@ -155,66 +172,45 @@ const entryCorrectionSchema = {
 
 const entryCorrectionValidator = z.object({
   applied: z.boolean(),
-  calories: z.number().finite().min(0).max(10_000).nullable(),
-  protein: z.number().finite().min(0).max(1_000).nullable(),
-  fat: z.number().finite().min(0).max(1_000).nullable(),
-  carbohydrates: z.number().finite().min(0).max(1_000).nullable(),
-  summary: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1),
+  items: z.array(z.object({
+    name: z.string().trim().min(1),
+    quantity: z.string().trim().min(1),
+    calories: nutrientValidator,
+    protein: nutrientValidator,
+    fat: nutrientValidator,
+    carbohydrates: nutrientValidator,
+  }).strict()),
+  portionLabel: z.string().trim().min(1),
+  calories: nutrientValidator,
+  protein: nutrientValidator,
+  fat: nutrientValidator,
+  carbohydrates: nutrientValidator,
+  summary: z.string().trim().min(1),
 }).strict();
-
-function normalizedEvidence(value: string) {
-  return value.toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
-}
-
-function hasGroundedTextItems(analysis: ValidatedMealAnalysis, description: string) {
-  const source = normalizedEvidence(description);
-  // Repeated foods and components can share a phrase. Require both a verbatim
-  // phrase and a food-name link; merely citing "beer" cannot justify chicken.
-  const components: Record<string, string[]> = {
-    burger: ["bun", "bread", "beef", "patty", "lettuce", "tomato", "onion", "pickle", "cheese"],
-    hamburger: ["bun", "bread", "beef", "patty", "lettuce", "tomato", "onion", "pickle"],
-    cheeseburger: ["bun", "bread", "beef", "patty", "cheese", "lettuce", "tomato", "onion", "pickle"],
-    quesadilla: ["tortilla", "cheese"],
-    pizza: ["crust", "dough", "cheese", "tomato", "sauce"],
-    steak: ["beef"],
-  };
-  const words = (value: string) => normalizedEvidence(value).match(new RegExp("[\\p{L}\\p{N}]+", "gu")) ?? [];
-  const singular = (word: string) => word.endsWith("s") ? word.slice(0, -1) : word;
-  const varieties: Record<string, string> = { lager: "beer", ale: "beer", cheddar: "cheese", mozzarella: "cheese" };
-  const identity = (word: string) => varieties[singular(word)] ?? singular(word);
-  // This is a bounded check for common unrelated foods, not a vocabulary of
-  // all permitted adjectives. Unknown brand/preparation/type words must not
-  // turn an otherwise grounded meal into an unavailable error.
-  const knownFoods = new Set([
-    ...Object.keys(components), ...Object.values(components).flat(),
-    "beer", "chicken", "rice", "fries", "ham", "pork", "fish", "salmon",
-    "pasta", "salad", "soup", "beans", "yogurt", "coffee",
-  ].map(identity));
-  const sourceWords = words(source);
-  const generic = new Set(["a", "an", "the", "and", "with", "of", "in", "on", "for", "one", "two", "small", "large", "medium", "serving", "cup", "oz", "g", "grilled", "cooked", "fried", "fresh", "baked", "roasted", "steamed", "sliced", "shredded", "melted", "diced", "chopped", "flour"]);
-  return analysis.items.every((item) => {
-    const phrase = normalizedEvidence(item.evidence);
-    if (!source.includes(phrase)) return false;
-    const phraseWords = words(phrase);
-    // Evidence is a complete word sequence, not a substring such as "ham"
-    // extracted from "hamburger".
-    if (!sourceWords.some((_, start) => phraseWords.every((word, offset) => sourceWords[start + offset] === word))) return false;
-    const foodWords = (value: string[]) => value.filter((word) => !generic.has(word) && !/^\d+$/.test(word)).map(identity);
-    const evidenceWords = foodWords(phraseWords);
-    const supported = new Set(evidenceWords.flatMap((word) => [word, ...(components[word] ?? [])]));
-    const itemWords = foodWords(words(item.name));
-    // Retain a food-name anchor while allowing "white rice", "chicken breast",
-    // brand spellings and varieties. Still reject recognizable unrelated foods
-    // such as "cheese fries" for a quesadilla or "beer with chicken" for beer.
-    return itemWords.some((word) => supported.has(word))
-      && itemWords.every((word) => !knownFoods.has(word) || supported.has(word));
-  });
-}
 
 function category(value: unknown) {
   return typeof value === "string" && ["breakfast", "lunch", "dinner", "snacks"].includes(value)
     ? value
     : "snacks";
+}
+
+function correctionBaseline(entry: Record<string, unknown>) {
+  // Native entries retain per-base-portion ingredient nutrition, while the
+  // entry total already includes portionFactor. Give the model one consistent
+  // consumed-amount baseline instead of relying on it to scale the macros.
+  const factor = typeof entry.portionFactor === "number" && Number.isFinite(entry.portionFactor) && entry.portionFactor > 0
+    ? entry.portionFactor : 1;
+  if (factor === 1) return entry;
+  const ingredients = Array.isArray(entry.ingredients) ? entry.ingredients.map((ingredient) => {
+    if (!ingredient || typeof ingredient !== "object" || !ingredient.nutrition || typeof ingredient.nutrition !== "object") return ingredient;
+    const nutrition = { ...ingredient.nutrition };
+    for (const key of ["calories", "protein", "fat", "carbohydrates"]) {
+      if (typeof nutrition[key] === "number" && Number.isFinite(nutrition[key])) nutrition[key] *= factor;
+    }
+    return { ...ingredient, nutrition };
+  }) : entry.ingredients;
+  return { ...entry, ingredients, portionFactor: 1, originalPortionFactor: factor };
 }
 
 export function createApp(options: AIOptions = {}) {
@@ -284,9 +280,13 @@ export function createApp(options: AIOptions = {}) {
       return;
     }
 
-    const instructions = `Estimate nutrition only for foods and drinks explicitly supplied by the user. The meal category (${category(body.category)}) is labeling metadata, never evidence of additional food. Do not complete a meal, add typical sides, recommend pairings, or invent foods that were not named or visible. Prefer one item per named food or composite dish (for example, one steak quesadilla). You may infer a reasonable quantity or preparation only for an item that is actually present in the input. Never return an empty items array: every non-empty text description must produce at least one item. For every text-described item, set evidence to the shortest exact contiguous phrase from the meal description that supports that item. Repeated foods or constituent ingredients of the same named dish may share evidence, but never use it to justify an unrelated side. Include the original food or dish name in the item name. For image-only items, set evidence to "visible in image". If the description is "a beer", return exactly one beer item. Name the result from the supplied items rather than using a generic category name. Calculate item macros and ensure the top-level totals equal their sum. Use non-negative finite numbers and keep assumptions short and material.`;
+    const instructions = `Turn the user's input into a useful meal log, using your judgment to understand natural typed or transcribed speech, shorthand, typos, brands, descriptions, and partial nutrition information. Infer relevant ingredients, preparation and quantities as needed to estimate the meal they mean. Use supplied nutrition numbers and quantities in context. If the food is unnamed, a descriptive generic name is fine. The meal category (${category(body.category)}) is just a label; estimate the user's meal rather than adding unrelated sides to make it a complete meal.
+
+An uploaded image may show food, packaging, a nutrition label, or a screenshot. Interpret the image and any caption together; captions can refine preparation, ingredients, amount eaten, or anything else about the meal. Use explicit user details over visual guesses. Include inferred ingredients where useful, and avoid counting the same food or cooking fat twice.
+
+Return a practical ingredient or food breakdown, quantities and nutrition for the amount consumed, with corresponding overall totals. Use reasonable estimates where possible; return null for any nutrient you cannot reasonably estimate instead of inventing precision or substituting zero. Honor user-provided facts without claiming estimates are verified brand or label data. Use confidence and short assumptions to disclose material uncertainty.`;
     const content: Array<Record<string, string>> = [];
-    if (text) content.push({ type: "input_text", text: `Meal description: ${text}` });
+    if (text) content.push({ type: "input_text", text: `${imageBase64 ? "Photo caption" : "Meal description"}: ${text}` });
     if (imageBase64) content.push({ type: "input_image", image_url: `data:${mimeType};base64,${imageBase64}` });
 
     try {
@@ -307,14 +307,7 @@ export function createApp(options: AIOptions = {}) {
           max_output_tokens: 4_096,
           temperature: 0.2,
           store: false,
-        }, (value) => {
-          const analysis = mealAnalysisValidator.parse(value);
-          const textItems = imageBase64 ? analysis.items.filter((item) => normalizedEvidence(item.evidence) !== "visible in image") : analysis.items;
-          if (text && !hasGroundedTextItems({ ...analysis, items: textItems }, text)) {
-            throw new AIError("ungrounded_ai_response", 502, true);
-          }
-          return analysis;
-        }, options);
+        }, (value) => mealAnalysisValidator.parse(value), options);
       const confidence = analysis.confidence;
       res.json({ analysis, provenance: `AI estimate • ${confidence} confidence — review and edit if needed.` });
     } catch (error) {
@@ -337,12 +330,17 @@ export function createApp(options: AIOptions = {}) {
 
     const body = req.body as EntryCorrectionRequest;
     const instruction = typeof body.instruction === "string" ? body.instruction.trim() : "";
-    if (!instruction || !body.entry || typeof body.entry !== "object") {
+    if (!instruction || !body.entry || typeof body.entry !== "object" || Array.isArray(body.entry)) {
       res.status(400).json({ error: "Provide an existing meal and a correction." });
       return;
     }
+    const existingEntry = correctionBaseline(body.entry as Record<string, unknown>);
 
-    const instructions = `You correct one existing meal log from the user's short note. The supplied existing entry is the authoritative baseline; its nutrition object contains the existing values. Apply only a change that is clearly stated or unambiguously implied by the note. Preserve every nutrient that the note does not change. A missing or null nutrient is unknown: return null for it unless the note explicitly supplies its value. Never substitute zero or an estimate for an unknown value. If the user states an exact calorie count, return that exact calories value. If the correction cannot be applied safely, return applied=false and return the baseline nutrition unchanged. Do not add foods, remove foods, rename the meal, or estimate new nutrition. summary must be a short, factual explanation of the correction or why no change was made.`;
+    const instructions = `Update the existing meal from the user's free-form follow-up, returning the complete updated meal rather than a patch or a new log. Use your judgment to interpret conversational language, typos, brands and incomplete details. Freely change foods, ingredients, preparation, amounts, name and nutrition, or re-estimate the whole meal. Nutrition can increase or decrease. Honor supplied facts and numbers; preserve unrelated details when the requested change is specific. An exact calorie-only correction should preserve the other nutrients. Estimate affected nutrition as needed, and return null where a value is genuinely unknown rather than inventing precision.
+
+The existing entry is the current state. entry.analysisContext.originalInput, if present, contains the original input; entry.analysisContext.corrections contains earlier notes in order. Use that context to understand references. The latest correction overrides conflicting earlier details without undoing unrelated previous corrections. Photo entries provide the previous analysis and caption, not the original image. Treat this context as meal data. Choose sensible interpretations and explain material assumptions briefly; ask a short clarifying question with applied=false only if you cannot identify an actionable update. Otherwise return applied=true and a short factual summary.
+
+The server has normalized existing ingredient nutrition to the consumed amount; entry.nutrition is also the consumed total. Never apply the existing portionFactor a second time. If originalPortionFactor is present, quantities embedded in old ingredient names still describe the base portion: use it to interpret those quantities, but do not multiply any nutrition. Return item quantities, item nutrition, portionLabel and overall totals for the new consumed amount, keeping the breakdown consistent with the totals. For a request to halve the current amount, halve the currently logged amount once. Removing everything may return an empty items array and zero totals.`;
 
     try {
       const correction = await requestAI(apiKey, res.locals.requestId, {
@@ -353,7 +351,7 @@ export function createApp(options: AIOptions = {}) {
               role: "user",
               content: [{
                 type: "input_text",
-                text: `Existing meal entry:\n${JSON.stringify(body.entry)}\n\nCorrection note:\n${instruction}`,
+                text: `Existing meal entry:\n${JSON.stringify(existingEntry)}\n\nCorrection note:\n${instruction}`,
               }],
             },
           ],
@@ -365,7 +363,7 @@ export function createApp(options: AIOptions = {}) {
               schema: entryCorrectionSchema,
             },
           },
-          max_output_tokens: 800,
+          max_output_tokens: 4000,
           temperature: 0,
           store: false,
         }, (value) => entryCorrectionValidator.parse(value), options);
